@@ -104,6 +104,11 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 <footer><div class="w" id="foot"></div></footer>
 <div id="toast" role="status"></div><div id="modal" hidden></div>
 <script>
+/* ===== Supabase connection: paste YOUR project's values here (Supabase > Project Settings > API).
+   Only the PUBLIC key goes here (called "anon" or "publishable"). NEVER paste the "service_role" or "secret" key.
+   While these are empty, the waitlist just saves on this device like before. ===== */
+const SUPABASE_URL="";       // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_ANON_KEY="";  // the long public key
 /* ===== language: tiny inline helper t(en, fr) ===== */
 let lang="en";try{lang=localStorage.getItem("cram_lang")||((navigator.language||"").toLowerCase().startsWith("fr")?"fr":"en")}catch(_){}
 const t=(a,b)=>lang==="fr"?b:a;
@@ -185,7 +190,12 @@ function courseSearch(go){
 function home(){
   const wlE=h("p",{class:"err",role:"alert"}),em=h("input",{type:"email",placeholder:"you@school.ca","aria-label":"Email"});
   const sub=()=>{const v=em.value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){wlE.textContent=t("Please enter a valid email address.","Entre une adresse courriel valide.");return}
-    wlE.textContent="";S.wl.push(v);save();em.value="";toast(t("You’re on the list (saved on this device only for now).","Tu es sur la liste (enregistré sur cet appareil seulement pour l’instant)."))};
+    wlE.textContent="";
+    if(!SUPABASE_URL||!SUPABASE_ANON_KEY){S.wl.push(v);save();em.value="";toast(t("You’re on the list (saved on this device only for now).","Tu es sur la liste (enregistré sur cet appareil seulement pour l’instant)."));return}
+    const hd={"apikey":SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"};if(SUPABASE_ANON_KEY.startsWith("eyJ"))hd.Authorization="Bearer "+SUPABASE_ANON_KEY;
+    fetch(SUPABASE_URL.replace(/\/+$/,"")+"/rest/v1/waitlist",{method:"POST",headers:hd,body:JSON.stringify({email:v,lang})})
+     .then(r=>{if(r.ok||r.status===409){em.value="";toast(t("You’re on the list. We’ll email you when your campus opens.","Tu es sur la liste. On t’écrira à l’ouverture de ton campus."))}else throw 0})
+     .catch(()=>{wlE.textContent=t("Something went wrong. Please try again in a moment.","Une erreur est survenue. Réessaie dans un instant.")})};
   const hd=(a,b,c,d)=>[h("h2",{class:"rv"},t(a,b)),c?h("p",{class:"sub rv"},t(c,d)):null];
   const soon=()=>h("span",{class:"tag wa"},t("Coming at launch","Au lancement"));
   const SH={mcgill:"McGill",vanier:"Vanier",udem:"UdeM",mont:"Montmorency"},pop=[];
@@ -328,13 +338,13 @@ function status(){
   const li=(a,b)=>h("li",{style:"margin:6px 0"},t(a,b));
   V.replaceChildren(h("section",{},h("h2",{},t("What’s real in this demo","Ce qui est réel dans cette démo")),h("p",{class:"sub"},t("Everything here runs in your browser with sample data. Nothing is sent to a server.","Tout fonctionne dans ton navigateur avec des données d’exemple. Rien n’est envoyé à un serveur.")),
    h("div",{class:"g2"},h("div",{class:"c"},h("h3",{style:"color:var(--ok)"},"✓ "+t("Works in the browser","Fonctionne dans le navigateur")),h("ul",{style:"padding-left:18px"},li("Course search, school/program/course matching","Recherche de cours et jumelage école/programme/cours"),li("Filters: price, day, rating","Filtres : prix, jour, note"),li("Booking requests, accept/decline, completion","Demandes de séance, accepter/refuser, terminer"),li("Reviews, ratings and session counts (from your own actions)","Avis, notes et nombre de séances (issus de tes actions)"),li("EN/FR switch, validation and error messages","Bascule EN/FR, validation et messages d’erreur"))),
-    h("div",{class:"c"},h("h3",{style:"color:var(--wa)"},"… "+t("Needs a backend or outside service","Exige un serveur ou un service externe")),h("ul",{style:"padding-left:18px"},li("Real accounts and logins (authentication)","Vrais comptes et connexions (authentification)"),li("A shared database for tutors, bookings and reviews","Une base de données partagée pour tuteurs, séances et avis"),li("Verifying transcripts (secure uploads plus manual review)","Vérifier les relevés (téléversement sécurisé et revue manuelle)"),li("Real messaging, email/SMS confirmations, calendar sync","Vraie messagerie, confirmations courriel/texto, synchro calendrier"),li("Payments and payouts (e.g. Stripe), taxes","Paiements et versements (ex. Stripe), taxes"),li("Waitlist emails reaching you (now saved on this device only)","Courriels de la liste d’attente jusqu’à toi (enregistrés ici seulement)")))),
+    h("div",{class:"c"},h("h3",{style:"color:var(--wa)"},"… "+t("Needs a backend or outside service","Exige un serveur ou un service externe")),h("ul",{style:"padding-left:18px"},li("Real accounts and logins (authentication)","Vrais comptes et connexions (authentification)"),li("A shared database for tutors, bookings and reviews","Une base de données partagée pour tuteurs, séances et avis"),li("Verifying transcripts (secure uploads plus manual review)","Vérifier les relevés (téléversement sécurisé et revue manuelle)"),li("Real messaging, email/SMS confirmations, calendar sync","Vraie messagerie, confirmations courriel/texto, synchro calendrier"),li("Payments and payouts (e.g. Stripe), taxes","Paiements et versements (ex. Stripe), taxes"),...(SUPABASE_URL?[]:[li("Waitlist emails reaching you (now saved on this device only)","Courriels de la liste d’attente jusqu’à toi (enregistrés ici seulement)")])))),
    h("p",{class:"mu",style:"margin-top:16px"},t("Demo course codes and tutors are made up. Real data must come from each school’s calendar and real, verified tutors.","Les codes de cours et les tuteurs sont fictifs. Les vraies données doivent venir du calendrier de chaque école et de vrais tuteurs vérifiés.")),
    h("div",{class:"row",style:"margin-top:12px"},h("a",{class:"btn g",href:"app.html"},t("Open the classic swipe demo","Ouvrir la démo classique à glisser")),h("button",{class:"btn no",onclick:()=>{S.bk=[];S.rev=[];S.msg=[];save();toast(t("Demo data reset","Données de démo réinitialisées"))}},t("Reset demo data","Réinitialiser la démo")))))}
 const nf=()=>V.replaceChildren(h("section",{},h("h2",{},t("Page not found","Page introuvable")),h("a",{class:"btn",href:"#/"},t("Go home","Accueil"))));
 /* ===== router, nav, language ===== */
 let cur=location.hash||"#/";
-const go=u=>{cur=u;try{history.replaceState(null,"",u)}catch(_){}route(true)};
+const go=u=>{if(u===cur)return route(true);cur=u;try{history.pushState(null,"",u)}catch(_){}route(true)}; // pushState adds a history entry so the browser Back button works
 function route(f){const[,r,a]=cur.split("/");if(!$("#modal").hidden)modal.close();
   const pending=S.bk.filter(b=>b.s==="pending").length;
   $("#nav").replaceChildren(...[["","Home","Accueil"],["find","Find","Trouver"],["requests","Sessions","Séances"],["status","Status","État"]].map(([k,e,f])=>h("a",{href:"#/"+k,class:(r||"")===k?"on":"","aria-current":(r||"")===k?"page":null},t(e,f),k==="requests"&&pending?" ("+pending+")":"")));
@@ -347,7 +357,7 @@ function route(f){const[,r,a]=cur.split("/");if(!$("#modal").hidden)modal.close(
 const $l=$("#lang");
 function setLang(l){lang=l;document.documentElement.lang=l;$l.dataset.l=l;$l.setAttribute("aria-checked",String(l==="fr"));try{localStorage.setItem("cram_lang",l)}catch(_){}route()}
 $l.onclick=()=>setLang(lang==="fr"?"en":"fr");
-addEventListener("hashchange",()=>{cur=location.hash||"#/";route(true)});document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest('a[href^="#/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey)return;e.preventDefault();go(a.getAttribute("href"))});addEventListener("scroll",()=>{const e=document.getElementById("hero");if(!e)return;e.style.setProperty("--p",Math.min(1,Math.max(0,scrollY/(e.offsetHeight*.8))))},{passive:true});document.documentElement.lang=lang;$l.dataset.l=lang;$l.setAttribute("aria-checked",String(lang==="fr"));route();
+const sync=()=>{const u=location.hash||"#/";if(u!==cur){cur=u;route(true)}};addEventListener("hashchange",sync);addEventListener("popstate",sync);document.addEventListener("click",e=>{const a=e.target.closest&&e.target.closest('a[href^="#/"]');if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey)return;e.preventDefault();go(a.getAttribute("href"))});addEventListener("scroll",()=>{const e=document.getElementById("hero");if(!e)return;e.style.setProperty("--p",Math.min(1,Math.max(0,scrollY/(e.offsetHeight*.8))))},{passive:true});document.documentElement.lang=lang;$l.dataset.l=lang;$l.setAttribute("aria-checked",String(lang==="fr"));route();
 </script>
 </body>
 </html>

@@ -107,8 +107,8 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 /* ===== Supabase connection: paste YOUR project's values here (Supabase > Project Settings > API).
    Only the PUBLIC key goes here (called "anon" or "publishable"). NEVER paste the "service_role" or "secret" key.
    While these are empty, the waitlist just saves on this device like before. ===== */
-const SUPABASE_URL="";       // e.g. "https://abcdefgh.supabase.co"
-const SUPABASE_ANON_KEY="";  // the long public key
+const SUPABASE_URL="https://flxakahbpaeagnxgtbzw.supabase.co";       // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_ANON_KEY="sb_publishable_xJ_NtOmUYmgfqklmP0UH5Q_zvYgFbMu";  // the long public key
 /* ===== language: tiny inline helper t(en, fr) ===== */
 let lang="en";try{lang=localStorage.getItem("cram_lang")||((navigator.language||"").toLowerCase().startsWith("fr")?"fr":"en")}catch(_){}
 const t=(a,b)=>lang==="fr"?b:a;

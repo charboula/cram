@@ -116,8 +116,12 @@ function authModal(mode, joinAs) {
       h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t("Kept private. Used only for our safety rules for minors.", "Gardée privée. Sert seulement à nos règles de sécurité pour les mineurs."))] : null,
     ...field(t("Email", "Courriel"), "email", "email", "email"),
     h("label", { class: "f" }, t("Password", "Mot de passe")), pw, er,
-    mode === "signup" ? h("p", { class: "mu", style: "font-size:13px" }, t("We’ll email you a link to confirm your account.", "On t’enverra un lien par courriel pour confirmer ton compte.")) : null,
-    btn);
+    mode === "signup" ? h("p", { class: "mu", style: "font-size:13px" }, t("We’ll email you a link to confirm your account. By creating an account, you agree to the ", "On t’enverra un lien par courriel pour confirmer ton compte. En créant un compte, tu acceptes les "),
+      h("a", { href: "#/terms", onclick: () => modal.close() }, t("Terms", "Conditions")), t(" and the ", " et la "),
+      h("a", { href: "#/privacy", onclick: () => modal.close() }, t("Privacy policy", "Politique de confidentialité")), ".") : null,
+    btn,
+    mode === "login" ? h("p", { style: "text-align:center;margin:12px 0 0;font-size:14px" },
+      h("a", { href: "#", onclick: e => { e.preventDefault(); forgotPassword(f.email); } }, t("Forgot your password?", "Mot de passe oublié?"))) : null);
 }
 
 /* ===== Loading the signed-in person from the database ===== */
@@ -151,9 +155,70 @@ async function loadUser(session) {
 async function signedIn(session) {
   if ($("#modal") && !$("#modal").hidden) modal.close();
   await loadUser(session);
+  if (RECOVERY) return go("#/password");
   toast(t("Welcome, ", "Bienvenue, ") + ME.name);
   go("#/dashboard");
 }
+
+/* ===== Password reset =====
+   1. "Forgot your password?" sends an email link (Supabase).
+   2. The link brings you back here already logged in; Supabase tells us it's a reset (PASSWORD_RECOVERY),
+      so we open the "Choose a new password" page. Open the link in the same browser you asked from. */
+let RECOVERY = false;
+function forgotPassword(prefill) {
+  const inp = h("input", { type: "email", value: prefill || "", autocomplete: "email", "aria-label": t("Email", "Courriel") });
+  const er = h("p", { class: "err", role: "alert" });
+  const btn = h("button", { class: "btn", style: "width:100%;margin-top:10px", onclick: async () => {
+    const email = inp.value.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { er.textContent = t("Please enter a valid email address.", "Entre une adresse courriel valide."); return; }
+    btn.disabled = true;
+    try {
+      const { error } = await withTimeout(SB.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }), 20000);
+      if (error && /rate limit|too many|seconds/i.test(error.message)) { er.textContent = t("Please wait a minute before asking for another link.", "Attends une minute avant de demander un autre lien."); return; }
+      // Same message whether or not the email has an account, so nobody can use this to check who is on Cram
+      modal(h("h3", { style: "margin-bottom:10px" }, t("Check your email", "Vérifie tes courriels")),
+        h("p", {}, t("If an account uses ", "Si un compte utilise ") + email + t(", we sent it a link to choose a new password.", ", on lui a envoyé un lien pour choisir un nouveau mot de passe.")),
+        h("p", { class: "mu", style: "font-size:13px" }, t("Open the link on this device, in this same browser. It works once and expires after a while.", "Ouvre le lien sur cet appareil, dans ce même navigateur. Il fonctionne une seule fois et expire après un moment.")),
+        h("button", { class: "btn", style: "width:100%", onclick: () => modal.close() }, "OK"));
+    } catch (e) {
+      er.textContent = e.message === "timeout" ? t("The connection is slow. Check your internet and try again.", "La connexion est lente. Vérifie ton Internet et réessaie.") : e.message;
+    } finally { btn.disabled = false; }
+  } }, t("Send me a link", "M’envoyer un lien"));
+  modal(h("h3", { style: "margin-bottom:8px" }, t("Reset your password", "Réinitialiser ton mot de passe")),
+    h("p", { class: "mu" }, t("Enter your account’s email. We’ll send you a link to choose a new password.", "Entre le courriel de ton compte. On t’enverra un lien pour choisir un nouveau mot de passe.")),
+    h("label", { class: "f" }, t("Email", "Courriel")), inp, er, btn,
+    h("p", { style: "text-align:center;margin:12px 0 0;font-size:14px" }, h("a", { href: "#", onclick: e => { e.preventDefault(); authModal("login"); } }, "‹ " + t("Back to log in", "Retour à la connexion"))));
+}
+
+// "Choose a new password" (after a reset link, or any time from the dashboard)
+function passwordPage() {
+  const a = h("input", { type: "password", autocomplete: "new-password", "aria-label": t("New password", "Nouveau mot de passe") });
+  const b = h("input", { type: "password", autocomplete: "new-password", "aria-label": t("Type it again", "Retape-le") });
+  const er = h("p", { class: "err", role: "alert" });
+  const btn = h("button", { class: "btn", style: "margin-top:12px", onclick: async () => {
+    if (a.value.length < 8) { er.textContent = t("Password must be at least 8 characters.", "Le mot de passe doit contenir au moins 8 caractères."); return; }
+    if (a.value !== b.value) { er.textContent = t("The two passwords don’t match.", "Les deux mots de passe ne correspondent pas."); return; }
+    btn.disabled = true;
+    try {
+      const { error } = await withTimeout(SB.auth.updateUser({ password: a.value }), 20000);
+      if (error) { er.textContent = /different|same/i.test(error.message) ? t("Choose a password different from your old one.", "Choisis un mot de passe différent de l’ancien.") : error.message; return; }
+      RECOVERY = false;
+      toast(t("Your new password is saved", "Ton nouveau mot de passe est enregistré"));
+      go("#/dashboard");
+    } catch (e) {
+      er.textContent = e.message === "timeout" ? t("The connection is slow. Check your internet and try again.", "La connexion est lente. Vérifie ton Internet et réessaie.") : e.message;
+    } finally { btn.disabled = false; }
+  } }, t("Save new password", "Enregistrer le mot de passe"));
+  V.replaceChildren(h("section", {}, h("div", { class: "c", style: "max-width:460px" },
+    h("h2", { style: "margin-bottom:6px" }, t("Choose a new password", "Choisis un nouveau mot de passe")),
+    h("p", { class: "mu" }, t("At least 8 characters. Use one you don’t use anywhere else.", "Au moins 8 caractères. Utilise-en un que tu n’utilises nulle part ailleurs.")),
+    h("label", { class: "f" }, t("New password", "Nouveau mot de passe")), a,
+    h("label", { class: "f" }, t("Type it again", "Retape-le")), b, er, btn)));
+  a.focus();
+}
+ROUTES.password = passwordPage;
+PAGE_TITLES.password = () => t("New password", "Nouveau mot de passe");
+NEED_LOGIN.add("password");
 
 function switchMode(mode) {
   if (!ME || !ME.roles[mode]) return;
@@ -173,7 +238,10 @@ async function addRole(role) {
 }
 
 if (SB) SB.auth.onAuthStateChange((ev, session) => setTimeout(() => { // setTimeout: Supabase advises not to call it again directly inside this callback
-  if (ev === "INITIAL_SESSION" && FROM_EMAIL_LINK) { // came back from the confirmation email
+  if (ev === "PASSWORD_RECOVERY") { // came back from a "reset your password" email
+    RECOVERY = true;
+    if (ME && ME.id === session.user.id) go("#/password");
+  } else if (ev === "INITIAL_SESSION" && FROM_EMAIL_LINK) { // came back from the confirmation email
     try { history.replaceState(null, "", location.pathname + (location.hash || "#/")); } catch (_) {}
     if (session) signedIn(session);
     else { loadUser(null); toast(t("Your email is confirmed. You can log in now.", "Ton courriel est confirmé. Tu peux te connecter maintenant.")); authModal("login"); }

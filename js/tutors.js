@@ -196,7 +196,8 @@ async function tutorPage(id) {
         h("button", { class: "btn", disabled: !!ME && ME.id === x.user_id, onclick: () => contactTutor(x.user_id) }, t("Contact", "Contacter")),
         h("span", { class: "mu" }, !ME ? t("Log in to contact tutors.", "Connecte-toi pour contacter les tuteurs.")
           : ME.id === x.user_id ? t("This is your own profile.", "C’est ton propre profil.")
-          : !ME.roles.student ? t("You need a student role to contact tutors.", "Il te faut un rôle élève pour contacter des tuteurs.") : ""))),
+          : !ME.roles.student ? t("You need a student role to contact tutors.", "Il te faut un rôle élève pour contacter des tuteurs.") : ""),
+        ME && ME.id !== x.user_id ? h("span", { style: "margin-left:auto" }, reportLink(x.user_id, null, tutorName(x))) : null)),
     h("div", { class: "g2", style: "margin-top:14px" },
       box(t("Subjects and skills", "Matières et compétences"), h("p", { class: "mu", style: "margin:0 0 6px" }, t("Grades are claimed by the tutor.", "Les notes sont déclarées par le tuteur.")),
         ...((x.tutor_subjects || []).length ? x.tutor_subjects.map(s => line(subjectName(s.subjects) + (s.course_code ? " · " + s.course_code : ""),

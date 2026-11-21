@@ -88,7 +88,8 @@ async function conversationPage(id) {
   const otherLink = c.student_id === ME.id ? h("a", { href: "#/tutor/" + c.tutor_id }, otherName(c)) : h("b", {}, otherName(c));
   V.replaceChildren(h("section", {},
     h("a", { href: "#/messages", class: "bk" }, "‹ " + t("All messages", "Tous les messages")),
-    h("h2", { style: "margin:10px 0 4px" }, otherLink),
+    h("div", { class: "row sp", style: "margin:10px 0 4px" }, h("h2", { style: "margin:0" }, otherLink),
+      reportLink(c.student_id === ME.id ? c.tutor_id : c.student_id, c.id, otherName(c))),
     h("p", { class: "mu", style: "margin:0 0 12px;font-size:13px" }, t("Keep your conversation on Cram. Never share passwords or payment details. For in-person sessions, meet in a public place.", "Garde ta conversation sur Cram. Ne partage jamais de mot de passe ni d’informations de paiement. Pour les séances en personne, rencontre-toi dans un lieu public.")),
     sessionsPanel(c),
     h("div", { class: "c", style: "padding:0;overflow:hidden" }, box,

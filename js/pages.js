@@ -75,7 +75,7 @@ function dashboard() {
     ME.dbError ? h("p", { class: "mu", style: "font-size:12px" }, t("Technical detail: ", "Détail technique : ") + ME.dbError) : null));
   else if (!ME.birthDate) cards.push(birthDateCard());
   if (ME.dbReady) cards.push(sessionsCard());
-  cards.push(...(ME.mode === "tutor" ? tutorCards() : studentCards()), otherRoleCard());
+  cards.push(...(ME.mode === "tutor" ? tutorCards() : studentCards()), otherRoleCard(), accountCard());
   V.replaceChildren(h("section", {},
     h("div", { class: "row sp" },
       h("div", {},
@@ -189,12 +189,14 @@ function status() {
           li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"),
           li("Tutoring requests, Find Students and offers to help", "Demandes de tutorat, Trouver des élèves et offres d’aide"),
           li("Private messages between a student and a tutor", "Messages privés entre un élève et un tuteur"),
-          li("Booking sessions, and reviews only after a completed session", "Réservation de séances, et avis seulement après une séance terminée"))),
+          li("Booking sessions, and reviews only after a completed session", "Réservation de séances, et avis seulement après une séance terminée"),
+          li("Password reset, reporting a problem, deleting your account", "Réinitialisation du mot de passe, signalement d’un problème, suppression du compte"))),
       h("div", { class: "c" },
         h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
         h("ul", { style: "padding-left:18px" },
           li("Payments through Cram", "Paiements par Cram"),
-          li("Password reset, reporting a problem, deleting your account", "Réinitialisation du mot de passe, signalement d’un problème, suppression du compte"))))));
+          li("Verified grades and profile photos for tutors", "Notes vérifiées et photos de profil pour les tuteurs"),
+          li("Final privacy policy and terms, reviewed by a lawyer", "Politique de confidentialité et conditions finales, révisées par un avocat"))))));
 }
 
 ROUTES.status = status;

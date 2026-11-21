@@ -99,7 +99,9 @@ function renderChrome() {
     h("a", { href: "#/" + key, class: r === key ? "on" : "", "aria-current": r === key ? "page" : null }, label)));
   $("#foot").replaceChildren(
     t("© Cram · An independent student project, not affiliated with any school. ", "© Cram · Un projet étudiant indépendant, non affilié à une école. "),
-    h("a", { href: "#/status" }, t("What’s real so far", "Ce qui est réel pour l’instant")));
+    h("a", { href: "#/status" }, t("What’s real so far", "Ce qui est réel pour l’instant")), " · ",
+    h("a", { href: "#/privacy" }, t("Privacy", "Confidentialité")), " · ",
+    h("a", { href: "#/terms" }, t("Terms", "Conditions")));
   $("#skip").textContent = t("Skip to main content", "Passer au contenu principal");
   acct();
 }
@@ -139,7 +141,7 @@ function route(focus) {
 // After logging in or out: redraw the menu, and the page if it depends on who is logged in
 function refreshForUser() {
   const r = cur.split("/")[1] || "";
-  if (NEED_LOGIN.has(r)) route(); else renderChrome();
+  if (NEED_LOGIN.has(r) || r === "tutor") route(); else renderChrome(); // the tutor page shows Contact and Report only when logged in
 }
 
 function needLogin() {

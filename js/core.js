@@ -88,8 +88,9 @@ const go = url => { if (url === cur) return route(true); cur = url; try { histor
 function navItems() {
   if (!ME) return [["", t("Home", "Accueil")], ["find", t("Find tutors", "Trouver un tuteur")]];
   const mine = ["profile", t("My profile", "Mon profil")];
-  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], ["students", t("Find students", "Trouver des élèves")], mine];
-  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], ["requests", t("My requests", "Mes demandes")], mine];
+  const msgs = ["messages", t("Messages", "Messages") + (typeof UNREAD !== "undefined" && UNREAD ? " (" + UNREAD + ")" : "")];
+  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], ["students", t("Find students", "Trouver des élèves")], msgs, mine];
+  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], ["requests", t("My requests", "Mes demandes")], msgs, mine];
 }
 
 function renderChrome() {

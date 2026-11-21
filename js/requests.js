@@ -76,7 +76,7 @@ function offerRow(o) {
       h("button", { class: "btn sm", onclick: () => answer("accepted") }, t("Connect", "Se connecter")),
       h("button", { class: "btn sm no", onclick: () => answer("declined") }, t("Decline", "Refuser")),
       tp ? h("a", { class: "btn sm g", href: "#/tutor/" + tp.user_id }, t("View profile", "Voir le profil")) : null)
-      : o.status === "accepted" ? h("p", { class: "mu", style: "margin:0" }, t("Messaging opens in the next update.", "La messagerie arrive dans la prochaine mise à jour.")) : null);
+      : o.status === "accepted" ? h("a", { href: "#/messages", class: "btn sm" }, t("Open messages", "Ouvrir les messages")) : null);
 }
 
 async function newRequestPage() {
@@ -199,7 +199,7 @@ async function studentsPage() {
 
 function requestCard(r, reasons, offer) {
   const offerBtn = offer
-    ? h("div", { class: "row" }, offer.status === "accepted" ? h("span", { class: "tag ok" }, t("The student connected with you", "L’élève s’est connecté avec toi"))
+    ? h("div", { class: "row" }, offer.status === "accepted" ? h("span", { class: "row" }, h("span", { class: "tag ok" }, t("The student connected with you", "L’élève s’est connecté avec toi")), h("a", { href: "#/messages", class: "btn sm" }, t("Messages", "Messages")))
         : offer.status === "declined" ? h("span", { class: "tag gr" }, t("The student chose someone else", "L’élève a choisi quelqu’un d’autre"))
         : h("span", { class: "tag wa" }, t("Offer sent, waiting for the student", "Offre envoyée, en attente de l’élève")),
       offer.status === "pending" ? h("button", { class: "btn sm g", onclick: async () => { const { error } = await SB.from("request_interests").delete().eq("id", offer.id); if (error) toast(error.message); else { toast(t("Offer withdrawn", "Offre retirée")); studentsPage(); } } }, t("Withdraw", "Retirer")) : null)

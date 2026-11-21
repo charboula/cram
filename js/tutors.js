@@ -188,8 +188,10 @@ async function tutorPage(id) {
         x.offers_online ? h("span", { class: "tag gr" }, t("Online", "En ligne")) : null, x.offers_in_person ? h("span", { class: "tag gr" }, t("In person", "En personne")) : null,
         ...((x.profiles && x.profiles.languages) || []).map(l => h("span", { class: "tag gr" }, label(LANGS, l)))),
       h("div", { class: "row", style: "margin-top:16px" },
-        h("button", { class: "btn", disabled: !!ME, onclick: () => authModal("login") }, t("Contact", "Contacter")),
-        h("span", { class: "mu" }, ME ? t("Messaging opens in an upcoming update.", "La messagerie arrive dans une prochaine mise à jour.") : t("Log in to contact tutors.", "Connecte-toi pour contacter les tuteurs.")))),
+        h("button", { class: "btn", disabled: !!ME && ME.id === x.user_id, onclick: () => contactTutor(x.user_id) }, t("Contact", "Contacter")),
+        h("span", { class: "mu" }, !ME ? t("Log in to contact tutors.", "Connecte-toi pour contacter les tuteurs.")
+          : ME.id === x.user_id ? t("This is your own profile.", "C’est ton propre profil.")
+          : !ME.roles.student ? t("You need a student role to contact tutors.", "Il te faut un rôle élève pour contacter des tuteurs.") : ""))),
     h("div", { class: "g2", style: "margin-top:14px" },
       box(t("Subjects and skills", "Matières et compétences"), h("p", { class: "mu", style: "margin:0 0 6px" }, t("Grades are claimed by the tutor.", "Les notes sont déclarées par le tuteur.")),
         ...((x.tutor_subjects || []).length ? x.tutor_subjects.map(s => line(subjectName(s.subjects) + (s.course_code ? " · " + s.course_code : ""),

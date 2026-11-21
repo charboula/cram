@@ -145,6 +145,7 @@ async function loadUser(session) {
   ME = me;
   AUTH_READY = true;
   refreshForUser();
+  refreshUnread();
 }
 
 async function signedIn(session) {

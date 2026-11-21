@@ -104,3 +104,10 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 .why{background:var(--ac2);border-radius:10px;padding:8px 12px;font-size:14px}
 #modal .c.wide{width:min(900px,100%)}
 .cmp{width:100%;border-collapse:collapse;font-size:14px}.cmp th,.cmp td{text-align:left;padding:8px;border-top:1px solid var(--ln);vertical-align:top}.cmp th{color:var(--mu);font-weight:600}
+/* Messages: conversation list and one conversation */
+.conv{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-top:1px solid var(--ln);color:var(--ink);text-decoration:none}.conv:first-child{border-top:0}.conv:hover{background:var(--bg)}
+.conv.unread{background:var(--ac2)}.conv.unread b::before{content:"● ";color:var(--ac)}
+.thread{display:flex;flex-direction:column;gap:8px;padding:16px;max-height:55vh;min-height:200px;overflow-y:auto;background:var(--bg)}
+.msg{max-width:78%;align-self:flex-start;background:var(--s);border:1px solid var(--ln);border-radius:14px 14px 14px 4px;padding:9px 12px}
+.msg.me{align-self:flex-end;background:var(--ac);color:#fff;border-color:var(--ac);border-radius:14px 14px 4px 14px}
+.msg small{display:block;margin-top:4px;font-size:11px;opacity:.7}

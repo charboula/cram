@@ -185,11 +185,11 @@ function status() {
           li("Age rules for minors", "Règles d’âge pour les mineurs"),
           li("Profiles: languages, level, school search, tutor subjects, schools, rate and availability", "Profils : langues, niveau, recherche d’école, matières, écoles, tarif et disponibilités du tuteur"),
           li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"),
-          li("Tutoring requests, Find Students and offers to help", "Demandes de tutorat, Trouver des élèves et offres d’aide"))),
+          li("Tutoring requests, Find Students and offers to help", "Demandes de tutorat, Trouver des élèves et offres d’aide"),
+          li("Private messages between a student and a tutor", "Messages privés entre un élève et un tuteur"))),
       h("div", { class: "c" },
         h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
         h("ul", { style: "padding-left:18px" },
-          li("Messages", "Messages"),
           li("Sessions and reviews", "Séances et avis"))))));
 }
 

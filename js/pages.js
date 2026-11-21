@@ -31,6 +31,7 @@ function home() {
       h("span", { class: "pill" }, t("Tutoring in Montreal, in English and French", "Tutorat à Montréal, en français et en anglais")),
       h("h1", {}, ...(lang === "fr" ? ["Trouve le bon tuteur pour ", h("em", {}, "n’importe quelle matière"), "."] : ["Find the right tutor for ", h("em", {}, "any subject"), "."])),
       h("p", { class: "lead" }, t("Search tutors by subject, school, budget and schedule. And if you tutor, find students who need exactly what you know.", "Cherche des tuteurs par matière, école, budget et horaire. Et si tu donnes des cours, trouve des élèves qui ont besoin exactement de ce que tu sais.")),
+      homeSearch(),
       h("div", { class: "row", style: "justify-content:center;margin-top:16px" },
         h("a", { class: "btn", href: "#/find" }, t("Find a tutor", "Trouver un tuteur")),
         h("button", { class: "btn g", onclick: join("tutor") }, t("Become a tutor", "Devenir tuteur"))))),
@@ -57,6 +58,13 @@ function home() {
       h("h2", {}, t("Know a subject well? Tutor it.", "Tu maîtrises une matière? Enseigne-la.")),
       h("p", { class: "sub", style: "margin-bottom:14px" }, t("Create your profile, set your rate, and find students who need help. Every tutor is reviewed by Cram before appearing.", "Crée ton profil, fixe ton tarif et trouve des élèves qui ont besoin d’aide. Chaque tuteur est vérifié par Cram avant d’apparaître.")),
       h("button", { class: "btn", onclick: join("tutor") }, t("Create a tutor account", "Créer un compte tuteur")))));
+}
+
+// Home search box: sends you to Find tutors with what you typed
+function homeSearch() {
+  const inp = h("input", { type: "text", placeholder: t("What do you need help with? e.g. Calculus, Excel, piano", "Tu as besoin d’aide en quoi? ex. Calcul, Excel, piano"),
+    "aria-label": t("Search tutors", "Chercher un tuteur"), onkeydown: e => { if (e.key === "Enter" && inp.value.trim()) go("#/find/" + encodeURIComponent(inp.value.trim())); } });
+  return h("div", { class: "sbox" }, inp);
 }
 
 /* ===== Dashboard (one page; what it shows depends on student or tutor mode) ===== */
@@ -96,7 +104,7 @@ function birthDateCard() {
 function studentCards() {
   return [
     h("div", { class: "c" }, h("h3", {}, t("Find a tutor", "Trouver un tuteur")),
-      h("p", { class: "mu" }, t("Browse tutors by course. For now the tutor list is demo data; real tutor profiles arrive in an upcoming update.", "Parcours les tuteurs par cours. Pour l’instant, la liste est une démo; les vrais profils arrivent dans une prochaine mise à jour.")),
+      h("p", { class: "mu" }, t("Search approved tutors by subject or course. We use your level and school to put the best matches first.", "Cherche des tuteurs approuvés par matière ou cours. On utilise ton niveau et ton école pour montrer les meilleurs choix en premier.")),
       h("a", { class: "btn sm", href: "#/find" }, t("Find a tutor", "Trouver un tuteur"))),
     h("div", { class: "c" }, h("h3", {}, t("Your requests", "Tes demandes")),
       h("p", { class: "mu" }, ME.kind === "parent"
@@ -157,3 +165,30 @@ ROUTES[""] = home;
 ROUTES.dashboard = dashboard;
 PAGE_TITLES[""] = () => t("Home", "Accueil");
 PAGE_TITLES.dashboard = () => t("Dashboard", "Tableau de bord");
+
+/* ===== "What's real so far" page (linked from the footer) ===== */
+function status() {
+  const li = (en, fr) => h("li", { style: "margin:6px 0" }, t(en, fr));
+  V.replaceChildren(h("section", {},
+    h("h2", {}, t("What’s real so far", "Ce qui est réel pour l’instant")),
+    h("p", { class: "sub" }, t("Cram is being built in steps. Here is exactly what is real today.", "Cram se construit par étapes. Voici exactement ce qui est réel aujourd’hui.")),
+    h("div", { class: "g2" },
+      h("div", { class: "c" },
+        h("h3", { style: "color:var(--ok)" }, "✓ " + t("Real (saved in Cram’s database)", "Réel (enregistré dans la base de données de Cram)")),
+        h("ul", { style: "padding-left:18px" },
+          li("Accounts: sign up, email confirmation, log in", "Comptes : inscription, confirmation par courriel, connexion"),
+          li("Student and tutor roles on one account, with a switch", "Rôles étudiant et tuteur sur un seul compte, avec une bascule"),
+          li("Tutor approval by Cram and the “show me in search” setting", "Approbation des tuteurs par Cram et le réglage « me montrer dans la recherche »"),
+          li("Age rules for minors", "Règles d’âge pour les mineurs"),
+          li("Profiles: languages, level, school search, tutor subjects, schools, rate and availability", "Profils : langues, niveau, recherche d’école, matières, écoles, tarif et disponibilités du tuteur"),
+          li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"))),
+      h("div", { class: "c" },
+        h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
+        h("ul", { style: "padding-left:18px" },
+          li("Tutoring requests and Find Students", "Demandes de tutorat et Trouver des élèves"),
+          li("Messages", "Messages"),
+          li("Sessions and reviews", "Séances et avis"))))));
+}
+
+ROUTES.status = status;
+PAGE_TITLES.status = () => t("What’s real so far", "Ce qui est réel");

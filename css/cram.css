@@ -100,3 +100,7 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 .home-two .c{border-top:4px solid var(--ac)}.home-two .c:nth-child(2){border-top-color:#2F4B8F}
 .aud .c:nth-child(1){border-top:4px solid var(--ac)}.aud .c:nth-child(2){border-top:4px solid #2F4B8F}.aud .c:nth-child(3){border-top:4px solid #1F7A6B}.aud .c:nth-child(4){border-top:4px solid #7A4B1F}
 .cta-band{background:linear-gradient(135deg,var(--ac),#A8325A)!important;color:#fff;border:0}.cta-band .sub{color:#F6E9ED}.cta-band .btn{background:#fff;color:var(--ac);border-color:#fff}
+/* Find tutors: "why this match" line and the comparison table */
+.why{background:var(--ac2);border-radius:10px;padding:8px 12px;font-size:14px}
+#modal .c.wide{width:min(900px,100%)}
+.cmp{width:100%;border-collapse:collapse;font-size:14px}.cmp th,.cmp td{text-align:left;padding:8px;border-top:1px solid var(--ln);vertical-align:top}.cmp th{color:var(--mu);font-weight:600}

@@ -37,7 +37,7 @@ function home() {
     h("div", { class: "strip rv" }, ...[["Any subject or skill", "Toute matière ou compétence"], ["Tutors set their own rate", "Les tuteurs fixent leur tarif"], ["English and French", "Anglais et français"], ["Every tutor approved by Cram", "Chaque tuteur approuvé par Cram"]].map(([a, b]) =>
       h("div", {}, h("span", { style: "color:var(--ok);font-weight:700" }, "✓ "), t(a, b)))),
     h("section", {}, ...heading("How Cram works", "Comment fonctionne Cram", "One site for both sides: students find tutors, and tutors find students.", "Un seul site pour les deux côtés : les élèves trouvent des tuteurs, et les tuteurs trouvent des élèves."),
-      h("div", { class: "g2" },
+      h("div", { class: "g2 home-two" },
         h("div", { class: "c rv" }, h("h3", {}, t("For students", "Pour les élèves")), steps(studentSteps)),
         h("div", { class: "c rv" }, h("h3", {}, t("For tutors", "Pour les tuteurs")), steps(tutorSteps)))),
     h("section", {}, ...heading("Made for everyone who learns", "Pour tous ceux qui apprennent", "", ""),
@@ -53,7 +53,7 @@ function home() {
           h("ul", { class: "mu", style: "padding-left:18px;margin:8px 0 0" }, h("li", {}, t("Tutors set their own rate", "Les tuteurs fixent leur tarif")), h("li", {}, t("Someone who knows your exact course or skill", "Quelqu’un qui connaît ton cours ou ta compétence")), h("li", {}, t("Evenings, weekends and a regular weekly slot", "Soirs, fins de semaine et une plage hebdomadaire régulière")))))),
     h("section", {}, h("h2", { class: "rv" }, t("Common questions", "Questions fréquentes")),
       h("div", { class: "tc rv", style: "margin-top:14px" }, ...faq.map(([q, qf, a, af]) => h("details", { class: "c" }, h("summary", {}, t(q, qf)), h("p", {}, t(a, af)))))),
-    h("section", {}, h("div", { class: "c rv", style: "background:var(--ac2);padding:28px" },
+    h("section", {}, h("div", { class: "c rv cta-band", style: "padding:28px" },
       h("h2", {}, t("Know a subject well? Tutor it.", "Tu maîtrises une matière? Enseigne-la.")),
       h("p", { class: "sub", style: "margin-bottom:14px" }, t("Create your profile, set your rate, and find students who need help. Every tutor is reviewed by Cram before appearing.", "Crée ton profil, fixe ton tarif et trouve des élèves qui ont besoin d’aide. Chaque tuteur est vérifié par Cram avant d’apparaître.")),
       h("button", { class: "btn", onclick: join("tutor") }, t("Create a tutor account", "Créer un compte tuteur")))));

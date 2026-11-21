@@ -1,6 +1,6 @@
 /* Cram styles: colours (light and dark), layout, buttons, cards, forms. */
+/* Light (white) theme is the default for everyone, even if the device is in dark mode. */
 :root{--bg:#FAFAFC;--s:#fff;--ink:#0E1525;--mu:#5B6275;--ac:#7E1D3C;--ac2:#F6E9ED;--ln:#E7E8EE;--ok:#0F7B53;--wa:#9A6700;--r:16px;box-sizing:border-box}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0B1020;--s:#141B30;--ink:#F1F3FA;--mu:#9AA3C0;--ac:#C2476B;--ac2:#2A1B2A;--ln:#262E4A;--ok:#4CC38A;--wa:#E0A83A}}
 :root[data-theme="dark"]{--bg:#0B1020;--s:#141B30;--ink:#F1F3FA;--mu:#9AA3C0;--ac:#C2476B;--ac2:#2A1B2A;--ln:#262E4A;--ok:#4CC38A;--wa:#E0A83A}
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-behavior:smooth;scroll-padding-top:80px}
@@ -94,3 +94,9 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 #foot a{color:var(--ac);font-weight:600}
 /* School search inside forms: full width, aligned left */
 .c .sbox{margin:0;max-width:none}.c .sbox input{box-shadow:none;padding:11px 12px 11px 40px;font-size:16px}.c .sbox::before{top:6px;left:13px}
+/* Home page colour: brand-coloured hero glow, coloured cards and a bold call-to-action band */
+.hero.solo{background:radial-gradient(70% 90% at 50% 0%,#F3D3DD 0%,#FBEFF3 45%,transparent 80%);border-radius:0 0 28px 28px}
+.strip{background:var(--ac2);border:0;border-radius:14px;padding:14px 18px;color:var(--ac);font-weight:600}
+.home-two .c{border-top:4px solid var(--ac)}.home-two .c:nth-child(2){border-top-color:#2F4B8F}
+.aud .c:nth-child(1){border-top:4px solid var(--ac)}.aud .c:nth-child(2){border-top:4px solid #2F4B8F}.aud .c:nth-child(3){border-top:4px solid #1F7A6B}.aud .c:nth-child(4){border-top:4px solid #7A4B1F}
+.cta-band{background:linear-gradient(135deg,var(--ac),#A8325A)!important;color:#fff;border:0}.cta-band .sub{color:#F6E9ED}.cta-band .btn{background:#fff;color:var(--ac);border-color:#fff}

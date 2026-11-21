@@ -19,7 +19,11 @@ const yearsText = s => s.is_current ? (s.start_year ? s.start_year + " – " : "
 async function loadTutors() {
   if (loadTutors.cache && Date.now() - loadTutors.at < 60000) return { data: loadTutors.cache };
   const { data, error } = await SB.from("tutor_profiles").select(TUTOR_FIELDS).eq("is_listed", true).eq("approved", true).limit(300);
-  if (!error) { loadTutors.cache = data; loadTutors.at = Date.now(); }
+  if (!error) {
+    const ratings = await loadRatings();
+    (data || []).forEach(x => { x.rating = ratings[x.user_id]; });
+    loadTutors.cache = data; loadTutors.at = Date.now();
+  }
   return { data, error };
 }
 
@@ -144,7 +148,7 @@ function tutorCard(x, reasons, redraw) {
       ((x.profiles && x.profiles.languages) || []).map(l => label(LANGS, l)).join(", ")].filter(Boolean).join(" · ")),
     reasons.length ? h("div", { class: "why" }, h("b", {}, t("Why this match: ", "Pourquoi ce choix : ")), reasons.join(" · ")) : null,
     h("div", { class: "row sp" },
-      h("div", { class: "row" }, h("a", { class: "btn sm", href: "#/tutor/" + x.user_id }, t("View profile", "Voir le profil")), verifyTag(x.verification_status)),
+      h("div", { class: "row" }, h("a", { class: "btn sm", href: "#/tutor/" + x.user_id }, t("View profile", "Voir le profil")), verifyTag(x.verification_status), ratingTag(x.rating)),
       h("label", { class: "row", style: "cursor:pointer;font-size:14px" }, h("input", { type: "checkbox", checked: inCompare, onchange: e => {
         const i = COMPARE.findIndex(c => c.user_id === x.user_id);
         if (e.target.checked) { if (COMPARE.length >= 3) { e.target.checked = false; toast(t("You can compare up to 3 tutors.", "Tu peux comparer jusqu’à 3 tuteurs.")); return; } COMPARE.push(x); }
@@ -176,6 +180,7 @@ async function tutorPage(id) {
   const { data: x, error } = await SB.from("tutor_profiles").select(TUTOR_FIELDS).eq("user_id", id).maybeSingle();
   if (error || !x) { nf(); return; }
   const rate = rateOf(x);
+  const reviews = await reviewsBox(x.user_id);
   const box = (title, ...kids) => h("div", { class: "c" }, h("h3", { style: "margin-bottom:6px" }, title), ...kids);
   const line = (main, sub) => h("div", { style: "padding:9px 0;border-top:1px solid var(--ln)" }, h("b", {}, main), sub ? h("div", { class: "mu" }, sub) : null);
   V.replaceChildren(h("section", {},
@@ -200,6 +205,7 @@ async function tutorPage(id) {
       box(t("Levels taught", "Niveaux enseignés"), h("p", { class: "mu", style: "margin:0" }, (x.levels || []).map(l => label(LEVELS, l)).join(", ") || "–")),
       box(t("Usually free", "Généralement libre"), h("p", { class: "mu", style: "margin:0" }, (x.availability || []).map(s => label(SLOTS, s)).join(", ") || "–"))),
     x.bio ? h("div", { class: "c", style: "margin-top:14px" }, h("h3", {}, t("About", "À propos")), h("p", { style: "white-space:pre-line;margin:8px 0 0" }, x.bio)) : null,
+    reviews,
     h("p", { class: "mu", style: "margin-top:14px" }, t("“Verified” appears only after Cram checks an official document. Everything else is self-reported by the tutor.", "« Vérifié » n’apparaît qu’après la vérification d’un document officiel par Cram. Le reste est déclaré par le tuteur."))));
 }
 

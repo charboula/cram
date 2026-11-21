@@ -48,7 +48,7 @@ section{padding:36px 0}h2{font-size:clamp(21px,2.2vw,28px);margin-bottom:8px}.su
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
 .sel{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media (max-width:760px){.sel{grid-template-columns:1fr}}
 label.f{display:block;font-size:13px;font-weight:600;color:var(--mu);margin:0 0 5px}
-select,input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],textarea{width:100%;background:var(--s);border:1px solid var(--ln);border-radius:12px;padding:11px 12px;font-size:16px}
+select,input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=datetime-local],textarea{width:100%;background:var(--s);border:1px solid var(--ln);border-radius:12px;padding:11px 12px;font-size:16px}
 textarea{min-height:90px;resize:vertical}
 .fil{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:16px 0}.fil>div{min-width:150px;flex:1}
 input[type=range]{width:100%;accent-color:var(--ac)}
@@ -111,3 +111,5 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 .msg{max-width:78%;align-self:flex-start;background:var(--s);border:1px solid var(--ln);border-radius:14px 14px 14px 4px;padding:9px 12px}
 .msg.me{align-self:flex-end;background:var(--ac);color:#fff;border-color:var(--ac);border-radius:14px 14px 4px 14px}
 .msg small{display:block;margin-top:4px;font-size:11px;opacity:.7}
+/* Reviews: star picker */
+.star{border:0;background:none;font-size:30px;line-height:1;color:var(--ln);cursor:pointer;padding:2px}.star.on{color:var(--ac)}

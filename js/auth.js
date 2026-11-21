@@ -136,7 +136,7 @@ async function loadUser(session) {
   me.roles.student = !!s.data;
   me.roles.tutor = !!tu.data;
   me.tutor = tu.data;
-  if (d.error) me.dbReady = false; // the database update for this version hasn't been run yet
+  if (d.error) { me.dbReady = false; me.dbError = d.error.message || String(d.error); console.warn("account_details:", d.error); } // the database update for this version hasn't been run yet
   else if (d.data) { me.birthDate = d.data.birth_date; me.kind = d.data.account_kind; }
   if (!me.roles.student && !me.roles.tutor) me.roles[p.data && p.data.role === "tutor" ? "tutor" : "student"] = true;
   let saved = "";

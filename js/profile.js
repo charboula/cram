@@ -116,7 +116,8 @@ async function profilePage() {
   const failed = [p, sp, tp, subs, schools, subjectList].find(r => r && r.error);
   if (failed) {
     V.replaceChildren(h("section", {}, h("div", { class: "c" }, h("h3", {}, t("Profiles aren’t switched on yet", "Les profils ne sont pas encore activés")),
-      h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard.")))));
+      h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard.")),
+      h("p", { class: "mu", style: "font-size:12px" }, t("Technical detail: ", "Détail technique : ") + (failed.error.message || String(failed.error))))));
     return;
   }
   const sections = [aboutSection(p.data || {})];

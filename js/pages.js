@@ -71,7 +71,8 @@ function homeSearch() {
 function dashboard() {
   const cards = [];
   if (!ME.dbReady) cards.push(h("div", { class: "c" }, h("h3", {}, t("Some account features aren’t switched on yet", "Certaines fonctions du compte ne sont pas encore activées")),
-    h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard."))));
+    h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard.")),
+    ME.dbError ? h("p", { class: "mu", style: "font-size:12px" }, t("Technical detail: ", "Détail technique : ") + ME.dbError) : null));
   else if (!ME.birthDate) cards.push(birthDateCard());
   if (ME.dbReady) cards.push(sessionsCard());
   cards.push(...(ME.mode === "tutor" ? tutorCards() : studentCards()), otherRoleCard());

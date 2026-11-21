@@ -103,12 +103,17 @@ details.c{padding:0}details summary{cursor:pointer;font-weight:600;padding:16px 
 <main id="v" class="w" tabindex="-1"></main>
 <footer><div class="w" id="foot"></div></footer>
 <div id="toast" role="status"></div><div id="modal" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* ===== Supabase connection: paste YOUR project's values here (Supabase > Project Settings > API).
    Only the PUBLIC key goes here (called "anon" or "publishable"). NEVER paste the "service_role" or "secret" key.
-   While these are empty, the waitlist just saves on this device like before. ===== */
-const SUPABASE_URL="";       // e.g. "https://abcdefgh.supabase.co"
-const SUPABASE_ANON_KEY="";  // the long public key
+   These power real sign-up and login. ===== */
+const SUPABASE_URL="https://flxakahbpaeagnxgtbzw.supabase.co";       // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_ANON_KEY="sb_publishable_xJ_NtOmUYmgfqklmP0UH5Q_zvYgFbMu";  // the long public key
+// PKCE = the email link comes back as ?code=... (not #tokens), so it never clashes with the #/ page links
+const SB=window.supabase&&SUPABASE_URL&&SUPABASE_ANON_KEY?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{flowType:"pkce",detectSessionInUrl:true,persistSession:true}}):null;
+const FROM_EMAIL_LINK=new URLSearchParams(location.search).has("code");
+const LINK_ERROR=/error/.test(location.search)||/^#error/.test(location.hash); // e.g. an expired confirmation link
 /* ===== language: tiny inline helper t(en, fr) ===== */
 let lang="en";try{lang=localStorage.getItem("cram_lang")||((navigator.language||"").toLowerCase().startsWith("fr")?"fr":"en")}catch(_){}
 const t=(a,b)=>lang==="fr"?b:a;
@@ -150,7 +155,7 @@ function slot(file,alt,ratio){const d=h("div",{class:"photo",role:"img","aria-la
   im.onload=()=>{d.style.backgroundImage="url("+file+")";d.classList.add("ok")};
   im.onerror=()=>{if(SHOW_SLOTS){d.classList.add("empty");d.setAttribute("aria-hidden","true");d.textContent="Photo spot · "+file}else d.style.display="none"};im.src=file;return d}
 function acct(){const a=$("#acct");a.replaceChildren();
-  if(S.user)a.append(h("span",{class:"d-only",style:"font-weight:600;font-size:14px"},S.user.n),h("button",{class:"btn g sm",onclick:()=>{S.user=null;save();acct();toast(t("Logged out","Déconnecté"))}},t("Log out","Se déconnecter")));
+  if(S.user)a.append(h("span",{class:"d-only",style:"font-weight:600;font-size:14px"},S.user.n),h("button",{class:"btn g sm",onclick:async()=>{try{SB&&await SB.auth.signOut()}catch(_){}S.user=null;save();acct();toast(t("Logged out","Déconnecté"))}},t("Log out","Se déconnecter")));
   else a.append(h("button",{class:"btn g sm",onclick:()=>authModal("login")},t("Log in","Connexion")),h("button",{class:"btn sm d-only",onclick:()=>authModal("signup")},t("Sign up","S’inscrire")))}
 function authModal(mode,role){
   const f={n:"",e:"",r:role||"student"},er=h("p",{class:"err",role:"alert"});
@@ -158,16 +163,43 @@ function authModal(mode,role){
   const tabs=h("div",{class:"seg"},...[["login",t("Log in","Connexion")],["signup",t("Sign up","Inscription")]].map(([m,l])=>h("button",{class:mode===m?"on":"",onclick:()=>authModal(m,f.r)},l)));
   const roles=h("div",{class:"seg"},...[["student",t("I need a tutor","Je cherche un tuteur")],["tutor",t("I want to tutor","Je veux tutorer")]].map(([r,l])=>h("button",{class:f.r===r?"on":"",onclick:e=>{f.r=r;[...roles.children].forEach(b=>b.classList.toggle("on",b===e.currentTarget))}},l)));
   const pw=h("input",{type:"password","aria-label":t("Password","Mot de passe"),autocomplete:mode==="login"?"current-password":"new-password"});
-  const ok=()=>{const em=f.e.trim().toLowerCase();
+  const ok=async()=>{const em=f.e.trim().toLowerCase();
     if(mode==="signup"&&f.n.trim().length<2){er.textContent=t("Please enter your name.","Entre ton nom.");return}
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){er.textContent=t("Please enter a valid email address.","Entre une adresse courriel valide.");return}
     if(pw.value.length<8){er.textContent=t("Password must be at least 8 characters.","Le mot de passe doit contenir au moins 8 caractères.");return}
-    if(mode==="signup"){if(S.acc.some(a=>a.e===em)){er.textContent=t("That email already has a demo account. Try logging in.","Ce courriel a déjà un compte de démo. Essaie de te connecter.");return}const a={n:f.n.trim(),e:em,r:f.r};S.acc.push(a);S.user=a}
-    else{const a=S.acc.find(x=>x.e===em);if(!a){er.textContent=t("No demo account with that email. Sign up first.","Aucun compte de démo avec ce courriel. Inscris-toi d’abord.");return}S.user=a}
-    save();modal.close();acct();toast(t("Welcome, ","Bienvenue, ")+S.user.n)};
+    if(!SB){er.textContent=t("Can’t reach the account service. Refresh the page and try again.","Impossible de joindre le service de comptes. Actualise la page et réessaie.");return}
+    er.textContent="";go_btn.disabled=true;
+    try{
+      if(mode==="signup"){
+        const{data,error}=await SB.auth.signUp({email:em,password:pw.value,options:{data:{role:f.r,display_name:f.n.trim()},emailRedirectTo:location.origin+location.pathname}});
+        if(error)throw error;
+        if(data.user&&data.user.identities&&data.user.identities.length===0){er.textContent=t("That email already has an account. Try logging in.","Ce courriel a déjà un compte. Essaie de te connecter.");return}
+        if(!data.session){modal(h("h3",{style:"margin-bottom:10px"},t("Check your email","Vérifie tes courriels")),h("p",{},t("We sent a confirmation link to ","On a envoyé un lien de confirmation à ")+em+t(". Click it to finish creating your account.",". Clique dessus pour terminer ton inscription.")),h("button",{class:"btn",style:"width:100%",onclick:()=>modal.close()},"OK"));return}
+        await signedIn(data.session);
+      }else{
+        const{data,error}=await SB.auth.signInWithPassword({email:em,password:pw.value});
+        if(error)throw error;
+        await signedIn(data.session);
+      }
+    }catch(e){const m=String(e&&e.message||"");
+      er.textContent=/invalid login/i.test(m)?t("Wrong email or password.","Courriel ou mot de passe incorrect."):/not confirmed/i.test(m)?t("Please confirm your email first. Check your inbox for the link.","Confirme d’abord ton courriel. Cherche le lien dans ta boîte de réception."):/rate limit|too many/i.test(m)?t("Too many tries. Please wait a minute and try again.","Trop d’essais. Attends une minute et réessaie."):t("Something went wrong: ","Une erreur est survenue : ")+m}
+    finally{go_btn.disabled=false}};
+  const go_btn=h("button",{class:"btn",style:"width:100%",onclick:ok},mode==="signup"?t("Create account","Créer le compte"):t("Log in","Se connecter"));
   modal(h("h3",{style:"margin-bottom:10px"},"Cram"),tabs,mode==="signup"?[...inp(t("Name","Nom"),"n","text"),h("label",{class:"f"},t("I’m joining as","Je m’inscris comme")),roles]:null,...inp(t("Email","Courriel"),"e","email"),h("label",{class:"f"},t("Password","Mot de passe")),pw,er,
-    h("p",{class:"mu",style:"font-size:13px"},t("Demo only: your password is not stored or checked. Real accounts need Supabase.","Démo seulement : ton mot de passe n’est ni enregistré ni vérifié. Les vrais comptes exigent Supabase.")),
-    h("button",{class:"btn",style:"width:100%",onclick:ok},mode==="signup"?t("Create account","Créer le compte"):t("Log in","Se connecter")))}
+    mode==="signup"?h("p",{class:"mu",style:"font-size:13px"},t("We’ll email you a link to confirm your account.","On t’enverra un lien par courriel pour confirmer ton compte.")):null,
+    go_btn)}
+/* ===== real accounts (Supabase Auth): keep S.user in sync with the logged-in account ===== */
+async function loadUser(session){
+  if(!session){S.user=null;save();acct();return}
+  const u=session.user,m=u.user_metadata||{};let r=m.role==="tutor"?"tutor":"student",n=m.display_name||u.email;
+  try{const{data}=await SB.from("profiles").select("role,display_name").eq("id",u.id).single();if(data){r=data.role;n=data.display_name||n}}catch(_){}
+  S.user={n,e:u.email,r};save();acct()}
+async function signedIn(session){if($("#modal")&&!$("#modal").hidden)modal.close();await loadUser(session);toast(t("Welcome, ","Bienvenue, ")+S.user.n);if(S.user.r==="student")go("#/find")}
+if(SB)SB.auth.onAuthStateChange((ev,session)=>setTimeout(()=>{ // setTimeout: Supabase advises not to call it again directly inside this callback
+  if(ev==="INITIAL_SESSION"&&FROM_EMAIL_LINK){ // came back from the confirmation email
+    try{history.replaceState(null,"",location.pathname+(location.hash||"#/"))}catch(_){}
+    if(session)signedIn(session);else{loadUser(null);toast(t("Your email is confirmed. You can log in now.","Ton courriel est confirmé. Tu peux te connecter."));authModal("login")}}
+  else if(ev==="INITIAL_SESSION"||ev==="SIGNED_OUT"||(ev==="SIGNED_IN"&&!FROM_EMAIL_LINK))loadUser(session)},0));
 const toast=m=>{const e=$("#toast");e.textContent=m;e.classList.add("on");clearTimeout(toast.x);toast.x=setTimeout(()=>e.classList.remove("on"),2600)};
 const money=n=>"$"+n+t("/hr","/h");
 const vb=v=>v==="verified"?h("span",{class:"tag ok"},"✓ "+t("Verified by Cram","Vérifié par Cram")):v==="pending"?h("span",{class:"tag wa"},"… "+t("Review pending","Vérification en cours")):h("span",{class:"tag gr"},t("Self-reported, not verified","Déclaré, non vérifié"));
@@ -188,14 +220,6 @@ function courseSearch(go){
   box.append(inp,res);return box}
 /* ===== views ===== */
 function home(){
-  const wlE=h("p",{class:"err",role:"alert"}),em=h("input",{type:"email",placeholder:"you@school.ca","aria-label":"Email"});
-  const sub=()=>{const v=em.value.trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){wlE.textContent=t("Please enter a valid email address.","Entre une adresse courriel valide.");return}
-    wlE.textContent="";
-    if(!SUPABASE_URL||!SUPABASE_ANON_KEY){S.wl.push(v);save();em.value="";toast(t("You’re on the list (saved on this device only for now).","Tu es sur la liste (enregistré sur cet appareil seulement pour l’instant)."));return}
-    const hd={"apikey":SUPABASE_ANON_KEY,"Content-Type":"application/json","Prefer":"return=minimal"};if(SUPABASE_ANON_KEY.startsWith("eyJ"))hd.Authorization="Bearer "+SUPABASE_ANON_KEY;
-    fetch(SUPABASE_URL.replace(/\/+$/,"")+"/rest/v1/waitlist",{method:"POST",headers:hd,body:JSON.stringify({email:v,lang})})
-     .then(r=>{if(r.ok||r.status===409){em.value="";toast(t("You’re on the list. We’ll email you when your campus opens.","Tu es sur la liste. On t’écrira à l’ouverture de ton campus."))}else throw 0})
-     .catch(()=>{wlE.textContent=t("Something went wrong. Please try again in a moment.","Une erreur est survenue. Réessaie dans un instant.")})};
   const hd=(a,b,c,d)=>[h("h2",{class:"rv"},t(a,b)),c?h("p",{class:"sub rv"},t(c,d)):null];
   const soon=()=>h("span",{class:"tag wa"},t("Coming at launch","Au lancement"));
   const SH={mcgill:"McGill",vanier:"Vanier",udem:"UdeM",mont:"Montmorency"},pop=[];
@@ -227,9 +251,7 @@ function home(){
      h("div",{class:"g2"},h("div",{class:"c rv"},h("h3",{},t("School and library help","Aide de l’école et de la bibliothèque")),h("ul",{class:"mu",style:"padding-left:18px;margin:8px 0 0"},h("li",{},t("Free","Gratuite")),h("li",{},t("Good for quiet space and quick questions","Idéale pour un lieu calme et des questions rapides")),h("li",{},t("Hours and availability can be limited","Les heures et disponibilités peuvent être limitées")))),
      h("div",{class:"c rv",style:"border-color:var(--ac)"},h("h3",{},"Cram"),h("ul",{class:"mu",style:"padding-left:18px;margin:8px 0 0"},h("li",{},t("Tutors set their own rate","Les tuteurs fixent leur tarif")),h("li",{},t("Someone who took your exact course","Quelqu’un qui a suivi ton cours exact")),h("li",{},t("Evenings, weekends and a regular weekly slot","Soirs, fins de semaine et une plage hebdomadaire régulière")))))),
    h("section",{},h("h2",{class:"rv"},t("Common questions","Questions fréquentes")),h("div",{class:"tc rv",style:"margin-top:14px"},...faq.map(([q,qf,a,af])=>h("details",{class:"c"},h("summary",{},t(q,qf)),h("p",{},t(a,af)))))),
-   h("section",{},h("div",{class:"c rv split",style:"background:var(--ac2);padding:28px"},h("div",{},h("h2",{},t("Got an A? Turn it into a side hustle.","Tu as eu un A? Fais-en un petit boulot.")),h("p",{class:"sub",style:"margin-bottom:14px"},t("Set your hours and rate, tutor the courses you passed, and get requests. Real sign-up opens at launch.","Fixe tes heures et ton tarif, tutore les cours que tu as réussis et reçois des demandes. L’inscription réelle ouvre au lancement.")),h("button",{class:"btn",onclick:()=>authModal("signup","tutor")},t("Create a tutor account (demo)","Créer un compte tuteur (démo)"))),slot("images/tutor.jpg",t("A tutor smiling during a session","Un tuteur souriant pendant une séance"),"16/10"))),
-   h("section",{},h("div",{class:"c rv"},h("h2",{},t("Join the waitlist","Joins la liste d’attente")),h("p",{class:"sub",style:"margin-bottom:12px"},t("Tell us where you study and we’ll reach out when your campus opens.","Dis-nous où tu étudies et on te contactera à l’ouverture de ton campus.")),
-    h("div",{class:"row"},h("div",{style:"flex:1;min-width:220px"},em),h("button",{class:"btn",onclick:sub},t("Notify me","Me prévenir"))),wlE)));
+   h("section",{},h("div",{class:"c rv split",style:"background:var(--ac2);padding:28px"},h("div",{},h("h2",{},t("Got an A? Turn it into a side hustle.","Tu as eu un A? Fais-en un petit boulot.")),h("p",{class:"sub",style:"margin-bottom:14px"},t("Set your hours and rate, tutor the courses you passed, and get requests. Real sign-up opens at launch.","Fixe tes heures et ton tarif, tutore les cours que tu as réussis et reçois des demandes. L’inscription réelle ouvre au lancement.")),h("button",{class:"btn",onclick:()=>authModal("signup","tutor")},t("Create a tutor account","Créer un compte tuteur"))),slot("images/tutor.jpg",t("A tutor smiling during a session","Un tuteur souriant pendant une séance"),"16/10"))));
 }
 function find(){
   const s=S.sel,F=find.F||(find.F={price:40,day:"",rating:0,view:"list"});
@@ -338,12 +360,13 @@ function status(){
   const li=(a,b)=>h("li",{style:"margin:6px 0"},t(a,b));
   V.replaceChildren(h("section",{},h("h2",{},t("What’s real in this demo","Ce qui est réel dans cette démo")),h("p",{class:"sub"},t("Everything here runs in your browser with sample data. Nothing is sent to a server.","Tout fonctionne dans ton navigateur avec des données d’exemple. Rien n’est envoyé à un serveur.")),
    h("div",{class:"g2"},h("div",{class:"c"},h("h3",{style:"color:var(--ok)"},"✓ "+t("Works in the browser","Fonctionne dans le navigateur")),h("ul",{style:"padding-left:18px"},li("Course search, school/program/course matching","Recherche de cours et jumelage école/programme/cours"),li("Filters: price, day, rating","Filtres : prix, jour, note"),li("Booking requests, accept/decline, completion","Demandes de séance, accepter/refuser, terminer"),li("Reviews, ratings and session counts (from your own actions)","Avis, notes et nombre de séances (issus de tes actions)"),li("EN/FR switch, validation and error messages","Bascule EN/FR, validation et messages d’erreur"))),
-    h("div",{class:"c"},h("h3",{style:"color:var(--wa)"},"… "+t("Needs a backend or outside service","Exige un serveur ou un service externe")),h("ul",{style:"padding-left:18px"},li("Real accounts and logins (authentication)","Vrais comptes et connexions (authentification)"),li("A shared database for tutors, bookings and reviews","Une base de données partagée pour tuteurs, séances et avis"),li("Verifying transcripts (secure uploads plus manual review)","Vérifier les relevés (téléversement sécurisé et revue manuelle)"),li("Real messaging, email/SMS confirmations, calendar sync","Vraie messagerie, confirmations courriel/texto, synchro calendrier"),li("Payments and payouts (e.g. Stripe), taxes","Paiements et versements (ex. Stripe), taxes"),...(SUPABASE_URL?[]:[li("Waitlist emails reaching you (now saved on this device only)","Courriels de la liste d’attente jusqu’à toi (enregistrés ici seulement)")])))),
+    h("div",{class:"c"},h("h3",{style:"color:var(--wa)"},"… "+t("Needs a backend or outside service","Exige un serveur ou un service externe")),h("ul",{style:"padding-left:18px"},li("Real accounts and logins (authentication)","Vrais comptes et connexions (authentification)"),li("A shared database for tutors, bookings and reviews","Une base de données partagée pour tuteurs, séances et avis"),li("Verifying transcripts (secure uploads plus manual review)","Vérifier les relevés (téléversement sécurisé et revue manuelle)"),li("Real messaging, email/SMS confirmations, calendar sync","Vraie messagerie, confirmations courriel/texto, synchro calendrier"),li("Payments and payouts (e.g. Stripe), taxes","Paiements et versements (ex. Stripe), taxes")))),
    h("p",{class:"mu",style:"margin-top:16px"},t("Demo course codes and tutors are made up. Real data must come from each school’s calendar and real, verified tutors.","Les codes de cours et les tuteurs sont fictifs. Les vraies données doivent venir du calendrier de chaque école et de vrais tuteurs vérifiés.")),
    h("div",{class:"row",style:"margin-top:12px"},h("a",{class:"btn g",href:"app.html"},t("Open the classic swipe demo","Ouvrir la démo classique à glisser")),h("button",{class:"btn no",onclick:()=>{S.bk=[];S.rev=[];S.msg=[];save();toast(t("Demo data reset","Données de démo réinitialisées"))}},t("Reset demo data","Réinitialiser la démo")))))}
 const nf=()=>V.replaceChildren(h("section",{},h("h2",{},t("Page not found","Page introuvable")),h("a",{class:"btn",href:"#/"},t("Go home","Accueil"))));
 /* ===== router, nav, language ===== */
 let cur=location.hash||"#/";
+if(LINK_ERROR){cur="#/";try{history.replaceState(null,"",location.pathname+"#/")}catch(_){}setTimeout(()=>toast(t("That email link has expired or was already used. Try logging in, or sign up again.","Ce lien a expiré ou a déjà été utilisé. Essaie de te connecter ou inscris-toi à nouveau.")),300)}
 const go=u=>{if(u===cur)return route(true);cur=u;try{history.pushState(null,"",u)}catch(_){}route(true)}; // pushState adds a history entry so the browser Back button works
 function route(f){const[,r,a]=cur.split("/");if(!$("#modal").hidden)modal.close();
   const pending=S.bk.filter(b=>b.s==="pending").length;

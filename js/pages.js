@@ -73,6 +73,7 @@ function dashboard() {
   if (!ME.dbReady) cards.push(h("div", { class: "c" }, h("h3", {}, t("Some account features aren’t switched on yet", "Certaines fonctions du compte ne sont pas encore activées")),
     h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard."))));
   else if (!ME.birthDate) cards.push(birthDateCard());
+  if (ME.dbReady) cards.push(sessionsCard());
   cards.push(...(ME.mode === "tutor" ? tutorCards() : studentCards()), otherRoleCard());
   V.replaceChildren(h("section", {},
     h("div", { class: "row sp" },
@@ -186,11 +187,13 @@ function status() {
           li("Profiles: languages, level, school search, tutor subjects, schools, rate and availability", "Profils : langues, niveau, recherche d’école, matières, écoles, tarif et disponibilités du tuteur"),
           li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"),
           li("Tutoring requests, Find Students and offers to help", "Demandes de tutorat, Trouver des élèves et offres d’aide"),
-          li("Private messages between a student and a tutor", "Messages privés entre un élève et un tuteur"))),
+          li("Private messages between a student and a tutor", "Messages privés entre un élève et un tuteur"),
+          li("Booking sessions, and reviews only after a completed session", "Réservation de séances, et avis seulement après une séance terminée"))),
       h("div", { class: "c" },
         h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
         h("ul", { style: "padding-left:18px" },
-          li("Sessions and reviews", "Séances et avis"))))));
+          li("Payments through Cram", "Paiements par Cram"),
+          li("Password reset, reporting a problem, deleting your account", "Réinitialisation du mot de passe, signalement d’un problème, suppression du compte"))))));
 }
 
 ROUTES.status = status;

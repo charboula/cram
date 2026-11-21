@@ -104,7 +104,7 @@ const listRow = (main, sub, onRemove) => h("div", { class: "row sp", style: "pad
 
 /* ===== The page ===== */
 async function profilePage() {
-  V.replaceChildren(h("section", {}, h("p", { class: "mu" }, t("Loading…", "Chargement…"))));
+  V.replaceChildren(loadingView());
   const one = q => q.maybeSingle();
   const [p, sp, tp, subs, schools, subjectList] = await Promise.all([
     one(SB.from("profiles").select("display_name,languages").eq("id", ME.id)),

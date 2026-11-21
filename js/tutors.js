@@ -123,7 +123,7 @@ async function findPage(arg) {
       h("div", {}, h("label", { class: "f" }, t("Free when", "Libre quand")), sel("slot", t("Any time", "N’importe quand"), SLOTS))),
     h("div", { class: "c", style: "padding:12px" }, schoolLine),
     compareBar, out));
-  out.append(h("p", { class: "mu" }, t("Loading tutors…", "Chargement des tuteurs…")));
+  out.append(h("p", { class: "mu loading" }, t("Loading tutors…", "Chargement des tuteurs…")));
   const { data, error } = await loadTutors();
   if (error) { out.replaceChildren(h("div", { class: "c mu" }, t("Couldn’t load tutors right now. Please try again.", "Impossible de charger les tuteurs. Réessaie."))); return; }
   tutors = data || [];
@@ -172,7 +172,7 @@ function showCompare() {
 
 /* ===== One tutor's full profile ===== */
 async function tutorPage(id) {
-  V.replaceChildren(h("section", {}, h("p", { class: "mu" }, t("Loading…", "Chargement…"))));
+  V.replaceChildren(loadingView());
   const { data: x, error } = await SB.from("tutor_profiles").select(TUTOR_FIELDS).eq("user_id", id).maybeSingle();
   if (error || !x) { nf(); return; }
   const rate = rateOf(x);

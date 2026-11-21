@@ -20,4 +20,4 @@ grant insert, update, delete on public.tutor_institutions to authenticated;
 grant insert (name, city, type, website) on public.institution_suggestions to authenticated;
 
 -- Make the website's database API notice the changes right away
-notify pgrst, 'reload schema';
+notify pgrst, $$reload schema$$;

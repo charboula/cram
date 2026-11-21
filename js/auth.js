@@ -1,0 +1,181 @@
+/* Cram accounts: sign up, log in, log out, loading the signed-in person, and switching between student and tutor. */
+
+// Age in whole years on today's date, from "YYYY-MM-DD"
+function ageFrom(dateStr) {
+  const b = new Date(dateStr + "T12:00"), n = new Date();
+  let a = n.getFullYear() - b.getFullYear();
+  if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
+  return a;
+}
+
+// Safety rules (the database checks them too). Returns an error message, or "" if fine.
+function ageProblem(dateStr, joinAs) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) return t("Please enter your date of birth.", "Entre ta date de naissance.");
+  const a = ageFrom(dateStr);
+  if (a < 0 || a > 120) return t("Please enter a real date of birth.", "Entre une vraie date de naissance.");
+  if (a < 14) return t("Cram accounts are for people 14 and older. A parent or guardian can create an account for you.", "Les comptes Cram sont pour les 14 ans et plus. Un parent ou tuteur légal peut créer un compte pour toi.");
+  if (joinAs === "tutor" && a < 18) return t("Tutors must be 18 or older. You can join as a student.", "Les tuteurs doivent avoir 18 ans ou plus. Tu peux t’inscrire comme élève.");
+  if (joinAs === "parent" && a < 18) return t("Parent and guardian accounts are for adults (18+).", "Les comptes parent ou tuteur légal sont pour les adultes (18 ans et plus).");
+  return "";
+}
+
+/* ===== Header: account area ===== */
+function acct() {
+  const a = $("#acct");
+  a.replaceChildren();
+  if (!AUTH_READY) return;
+  if (ME) {
+    const both = ME.roles.student && ME.roles.tutor;
+    a.append(...[
+      h("span", { class: "d-only", style: "font-weight:600;font-size:14px" }, ME.name),
+      both ? h("button", { class: "btn g sm d-only", onclick: () => switchMode(ME.mode === "tutor" ? "student" : "tutor") },
+        ME.mode === "tutor" ? t("Switch to student", "Passer en élève") : t("Switch to tutor", "Passer en tuteur")) : null,
+      h("button", { class: "btn g sm", onclick: logOut }, t("Log out", "Se déconnecter"))].filter(Boolean));
+  } else {
+    a.append(
+      h("button", { class: "btn g sm", onclick: () => authModal("login") }, t("Log in", "Connexion")),
+      h("button", { class: "btn sm d-only", onclick: () => authModal("signup") }, t("Sign up", "S’inscrire")));
+  }
+}
+
+async function logOut() {
+  try { SB && await SB.auth.signOut(); } catch (_) {}
+  ME = null;
+  toast(t("Logged out", "Déconnecté"));
+  go("#/");
+}
+
+/* ===== Sign-up / log-in dialog. joinAs: "student", "parent" or "tutor" ===== */
+function authModal(mode, joinAs) {
+  const f = { name: "", email: "", joinAs: joinAs || "student" };
+  const er = h("p", { class: "err", role: "alert" });
+  const field = (label, key, type, auto) => [
+    h("label", { class: "f" }, label),
+    h("input", { type, "aria-label": label, autocomplete: auto, oninput: e => { f[key] = e.target.value; } })];
+  const tabs = h("div", { class: "seg" }, ...[["login", t("Log in", "Connexion")], ["signup", t("Sign up", "Inscription")]].map(([m, l]) =>
+    h("button", { class: mode === m ? "on" : "", onclick: () => authModal(m, f.joinAs) }, l)));
+  const roles = h("div", { class: "chips", style: "margin-bottom:12px" }, ...[
+    ["student", t("I need a tutor", "Je cherche un tuteur")],
+    ["parent", t("I’m a parent or guardian", "Je suis parent ou tuteur légal")],
+    ["tutor", t("I want to tutor", "Je veux donner des cours")]].map(([r, l]) =>
+    h("button", { class: "chip" + (f.joinAs === r ? " on" : ""), "aria-pressed": String(f.joinAs === r), onclick: e => {
+      f.joinAs = r;
+      [...roles.children].forEach(b => { b.classList.toggle("on", b === e.currentTarget); b.setAttribute("aria-pressed", String(b === e.currentTarget)); });
+    } }, l)));
+  const dob = h("input", { type: "date", "aria-label": t("Date of birth", "Date de naissance"), max: new Date().toISOString().slice(0, 10) });
+  const pw = h("input", { type: "password", "aria-label": t("Password", "Mot de passe"), autocomplete: mode === "login" ? "current-password" : "new-password" });
+
+  const submit = async () => {
+    const email = f.email.trim().toLowerCase();
+    if (mode === "signup" && f.name.trim().length < 2) { er.textContent = t("Please enter your name.", "Entre ton nom."); return; }
+    if (mode === "signup") { const p = ageProblem(dob.value, f.joinAs); if (p) { er.textContent = p; return; } }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { er.textContent = t("Please enter a valid email address.", "Entre une adresse courriel valide."); return; }
+    if (pw.value.length < 8) { er.textContent = t("Password must be at least 8 characters.", "Le mot de passe doit contenir au moins 8 caractères."); return; }
+    if (!SB) { er.textContent = t("Can’t reach the account service. Refresh the page and try again.", "Impossible de joindre le service de comptes. Actualise la page et réessaie."); return; }
+    er.textContent = "";
+    btn.disabled = true;
+    try {
+      if (mode === "signup") {
+        // These details go to the database, which creates the profile (see handle_new_user in the SQL scripts)
+        const data_ = {
+          role: f.joinAs === "tutor" ? "tutor" : "student",
+          account_kind: f.joinAs === "parent" ? "parent" : "self",
+          display_name: f.name.trim(),
+          birth_date: dob.value };
+        const { data, error } = await SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname } });
+        if (error) throw error;
+        if (data.user && data.user.identities && data.user.identities.length === 0) { er.textContent = t("That email already has an account. Try logging in.", "Ce courriel a déjà un compte. Essaie de te connecter."); return; }
+        if (!data.session) {
+          modal(h("h3", { style: "margin-bottom:10px" }, t("Check your email", "Vérifie tes courriels")),
+            h("p", {}, t("We sent a confirmation link to ", "On a envoyé un lien de confirmation à ") + email + t(". Click it to finish creating your account.", ". Clique dessus pour terminer ton inscription.")),
+            h("button", { class: "btn", style: "width:100%", onclick: () => modal.close() }, "OK"));
+          return;
+        }
+        await signedIn(data.session);
+      } else {
+        const { data, error } = await SB.auth.signInWithPassword({ email, password: pw.value });
+        if (error) throw error;
+        await signedIn(data.session);
+      }
+    } catch (e) {
+      const m = String((e && e.message) || "");
+      er.textContent = /invalid login/i.test(m) ? t("Wrong email or password.", "Courriel ou mot de passe incorrect.")
+        : /not confirmed/i.test(m) ? t("Please confirm your email first. Check your inbox for the link.", "Confirme d’abord ton courriel. Cherche le lien dans ta boîte de réception.")
+        : /rate limit|too many/i.test(m) ? t("Too many tries. Please wait a minute and try again.", "Trop d’essais. Attends une minute et réessaie.")
+        : /database error/i.test(m) ? t("We couldn’t create this account. Check your date of birth and try again.", "Impossible de créer ce compte. Vérifie ta date de naissance et réessaie.")
+        : t("Something went wrong: ", "Une erreur est survenue : ") + m;
+    } finally { btn.disabled = false; }
+  };
+  const btn = h("button", { class: "btn", style: "width:100%", onclick: submit }, mode === "signup" ? t("Create account", "Créer le compte") : t("Log in", "Se connecter"));
+  modal(h("h3", { style: "margin-bottom:10px" }, "Cram"), tabs,
+    mode === "signup" ? [
+      h("label", { class: "f" }, t("I’m joining because", "Je m’inscris parce que")), roles,
+      ...field(t("Your name", "Ton nom"), "name", "text", "name"),
+      h("label", { class: "f" }, t("Your date of birth", "Ta date de naissance")), dob,
+      h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t("Kept private. Used only for our safety rules for minors.", "Gardée privée. Sert seulement à nos règles de sécurité pour les mineurs."))] : null,
+    ...field(t("Email", "Courriel"), "email", "email", "email"),
+    h("label", { class: "f" }, t("Password", "Mot de passe")), pw, er,
+    mode === "signup" ? h("p", { class: "mu", style: "font-size:13px" }, t("We’ll email you a link to confirm your account.", "On t’enverra un lien par courriel pour confirmer ton compte.")) : null,
+    btn);
+}
+
+/* ===== Loading the signed-in person from the database ===== */
+async function loadUser(session) {
+  if (!session) { ME = null; AUTH_READY = true; refreshForUser(); return; }
+  const u = session.user, meta = u.user_metadata || {};
+  const me = { id: u.id, email: u.email, name: meta.display_name || u.email, roles: { student: false, tutor: false }, mode: "student",
+    kind: "self", birthDate: null, tutor: null, dbReady: true };
+  const one = q => q.maybeSingle().then(r => r, e => ({ data: null, error: e }));
+  const [p, s, tu, d] = await Promise.all([
+    one(SB.from("profiles").select("role,display_name").eq("id", u.id)),
+    one(SB.from("student_profiles").select("user_id").eq("user_id", u.id)),
+    one(SB.from("tutor_profiles").select("approved,is_listed,headline,bio,hourly_rate_cents").eq("user_id", u.id)),
+    one(SB.from("account_details").select("birth_date,account_kind").eq("user_id", u.id))]);
+  if (p.data) me.name = p.data.display_name || me.name;
+  me.roles.student = !!s.data;
+  me.roles.tutor = !!tu.data;
+  me.tutor = tu.data;
+  if (d.error) me.dbReady = false; // the database update for this version hasn't been run yet
+  else if (d.data) { me.birthDate = d.data.birth_date; me.kind = d.data.account_kind; }
+  if (!me.roles.student && !me.roles.tutor) me.roles[p.data && p.data.role === "tutor" ? "tutor" : "student"] = true;
+  let saved = "";
+  try { saved = localStorage.getItem("cram_mode") || ""; } catch (_) {}
+  me.mode = me.roles[saved] ? saved : (p.data && me.roles[p.data.role] ? p.data.role : (me.roles.tutor ? "tutor" : "student"));
+  ME = me;
+  AUTH_READY = true;
+  refreshForUser();
+}
+
+async function signedIn(session) {
+  if ($("#modal") && !$("#modal").hidden) modal.close();
+  await loadUser(session);
+  toast(t("Welcome, ", "Bienvenue, ") + ME.name);
+  go("#/dashboard");
+}
+
+function switchMode(mode) {
+  if (!ME || !ME.roles[mode]) return;
+  ME.mode = mode;
+  try { localStorage.setItem("cram_mode", mode); } catch (_) {}
+  toast(mode === "tutor" ? t("You’re now in tutor mode", "Tu es maintenant en mode tuteur") : t("You’re now in student mode", "Tu es maintenant en mode élève"));
+  go("#/dashboard");
+}
+
+// Adds the other role to this account (the database checks the tutor age rule)
+async function addRole(role) {
+  const { error } = await SB.rpc("add_role", { r: role });
+  if (error) { toast(/18/.test(error.message) ? t("Tutors must be 18 or older.", "Les tuteurs doivent avoir 18 ans ou plus.") : t("Couldn’t add the role: ", "Impossible d’ajouter le rôle : ") + error.message); return; }
+  const { data } = await SB.auth.getSession();
+  await loadUser(data.session);
+  switchMode(role);
+}
+
+if (SB) SB.auth.onAuthStateChange((ev, session) => setTimeout(() => { // setTimeout: Supabase advises not to call it again directly inside this callback
+  if (ev === "INITIAL_SESSION" && FROM_EMAIL_LINK) { // came back from the confirmation email
+    try { history.replaceState(null, "", location.pathname + (location.hash || "#/")); } catch (_) {}
+    if (session) signedIn(session);
+    else { loadUser(null); toast(t("Your email is confirmed. You can log in now.", "Ton courriel est confirmé. Tu peux te connecter maintenant.")); authModal("login"); }
+  } else if (ev === "SIGNED_IN" && ME && session && session.user.id === ME.id) {
+    // same person, nothing changed (this event also fires when you come back to the tab)
+  } else if (ev === "INITIAL_SESSION" || ev === "SIGNED_OUT" || (ev === "SIGNED_IN" && !FROM_EMAIL_LINK)) loadUser(session);
+}, 0));

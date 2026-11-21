@@ -1,5 +1,5 @@
 /* Cram core: Supabase connection, language, small helpers, menu and page router.
-   index.html loads this file first, then auth.js, pages.js and demo.js. */
+   index.html loads this file first, then auth.js, pages.js, profile.js and tutors.js. */
 
 /* ===== Supabase connection =====
    Only the PUBLIC key goes here (called "anon" or "publishable"). NEVER paste the "service_role" or "secret" key. */
@@ -86,12 +86,10 @@ const go = url => { if (url === cur) return route(true); cur = url; try { histor
 
 // The menu changes with who is looking: visitor, student mode or tutor mode
 function navItems() {
-  const pending = typeof demoPending === "function" ? demoPending() : 0;
-  const sessions = ["requests", t("Sessions", "Séances") + (pending ? " (" + pending + ")" : "")];
   if (!ME) return [["", t("Home", "Accueil")], ["find", t("Find tutors", "Trouver un tuteur")]];
   const mine = ["profile", t("My profile", "Mon profil")];
-  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], mine, sessions];
-  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], mine, sessions];
+  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Tutors", "Tuteurs")], mine];
+  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], mine];
 }
 
 function renderChrome() {

@@ -108,9 +108,9 @@ function studentCards() {
       h("a", { class: "btn sm", href: "#/find" }, t("Find a tutor", "Trouver un tuteur"))),
     h("div", { class: "c" }, h("h3", {}, t("Your requests", "Tes demandes")),
       h("p", { class: "mu" }, ME.kind === "parent"
-        ? t("Soon you’ll be able to post what your child needs help with, and approved tutors can offer to help.", "Bientôt, tu pourras publier ce pour quoi ton enfant a besoin d’aide, et des tuteurs approuvés pourront proposer leur aide.")
-        : t("Soon you’ll be able to post what you need help with, and approved tutors can offer to help.", "Bientôt, tu pourras publier ce pour quoi tu as besoin d’aide, et des tuteurs approuvés pourront proposer leur aide.")),
-      h("span", { class: "tag gr" }, t("Coming next", "À venir"))),
+        ? t("Post what your child needs help with. Approved tutors can offer to help, and you choose who to connect with.", "Publie ce pour quoi ton enfant a besoin d’aide. Des tuteurs approuvés peuvent proposer leur aide, et tu choisis avec qui te connecter.")
+        : t("Post what you need help with. Approved tutors can offer to help, and you choose who to connect with.", "Publie ce pour quoi tu as besoin d’aide. Des tuteurs approuvés peuvent proposer leur aide, et tu choisis avec qui te connecter.")),
+      h("div", { class: "row" }, h("a", { class: "btn sm", href: "#/requests/new" }, t("New request", "Nouvelle demande")), h("a", { class: "btn sm g", href: "#/requests" }, t("My requests", "Mes demandes")))),
     h("div", { class: "c" }, h("h3", {}, t("Your profile", "Ton profil")),
       h("p", { class: "mu" }, t("Add your level, languages and school (optional) so we can suggest the right tutors.", "Ajoute ton niveau, tes langues et ton école (facultatif) pour qu’on te suggère les bons tuteurs.")),
       h("a", { class: "btn sm g", href: "#/profile" }, t("Edit my profile", "Modifier mon profil")))];
@@ -130,6 +130,9 @@ function tutorCards() {
     !tp.bio && t("a short bio", "une courte bio"),
     !tp.hourly_rate_cents && t("your hourly rate", "ton tarif horaire")].filter(Boolean);
   return [
+    h("div", { class: "c" }, h("h3", {}, t("Find students", "Trouver des élèves")),
+      h("p", { class: "mu" }, t("Browse requests from students who want help, with the best matches for your profile first.", "Parcours les demandes d’élèves qui veulent de l’aide, avec les meilleurs choix pour ton profil en premier.")),
+      h("a", { class: "btn sm", href: "#/students" }, t("Find students", "Trouver des élèves"))),
     h("div", { class: "c" }, h("h3", {}, t("Your status", "Ton statut")),
       h("div", { class: "row", style: "margin:8px 0" }, tp.approved
         ? h("span", { class: "tag ok" }, "✓ " + t("Approved by Cram", "Approuvé par Cram"))
@@ -181,11 +184,11 @@ function status() {
           li("Tutor approval by Cram and the “show me in search” setting", "Approbation des tuteurs par Cram et le réglage « me montrer dans la recherche »"),
           li("Age rules for minors", "Règles d’âge pour les mineurs"),
           li("Profiles: languages, level, school search, tutor subjects, schools, rate and availability", "Profils : langues, niveau, recherche d’école, matières, écoles, tarif et disponibilités du tuteur"),
-          li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"))),
+          li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"),
+          li("Tutoring requests, Find Students and offers to help", "Demandes de tutorat, Trouver des élèves et offres d’aide"))),
       h("div", { class: "c" },
         h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
         h("ul", { style: "padding-left:18px" },
-          li("Tutoring requests and Find Students", "Demandes de tutorat et Trouver des élèves"),
           li("Messages", "Messages"),
           li("Sessions and reviews", "Séances et avis"))))));
 }

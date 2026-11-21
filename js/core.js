@@ -1,5 +1,5 @@
 /* Cram core: Supabase connection, language, small helpers, menu and page router.
-   index.html loads this file first, then auth.js, pages.js, profile.js and tutors.js. */
+   index.html loads this file first, then auth.js, pages.js, profile.js, tutors.js and requests.js. */
 
 /* ===== Supabase connection =====
    Only the PUBLIC key goes here (called "anon" or "publishable"). NEVER paste the "service_role" or "secret" key. */
@@ -88,8 +88,8 @@ const go = url => { if (url === cur) return route(true); cur = url; try { histor
 function navItems() {
   if (!ME) return [["", t("Home", "Accueil")], ["find", t("Find tutors", "Trouver un tuteur")]];
   const mine = ["profile", t("My profile", "Mon profil")];
-  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Tutors", "Tuteurs")], mine];
-  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], mine];
+  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], ["students", t("Find students", "Trouver des élèves")], mine];
+  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], ["requests", t("My requests", "Mes demandes")], mine];
 }
 
 function renderChrome() {

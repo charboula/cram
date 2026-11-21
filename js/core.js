@@ -89,8 +89,9 @@ function navItems() {
   const pending = typeof demoPending === "function" ? demoPending() : 0;
   const sessions = ["requests", t("Sessions", "Séances") + (pending ? " (" + pending + ")" : "")];
   if (!ME) return [["", t("Home", "Accueil")], ["find", t("Find tutors", "Trouver un tuteur")]];
-  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], sessions];
-  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], sessions];
+  const mine = ["profile", t("My profile", "Mon profil")];
+  if (ME.mode === "tutor") return [["dashboard", t("Dashboard", "Tableau de bord")], mine, sessions];
+  return [["dashboard", t("Dashboard", "Tableau de bord")], ["find", t("Find tutors", "Trouver un tuteur")], mine, sessions];
 }
 
 function renderChrome() {

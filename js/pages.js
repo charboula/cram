@@ -102,7 +102,10 @@ function studentCards() {
       h("p", { class: "mu" }, ME.kind === "parent"
         ? t("Soon you’ll be able to post what your child needs help with, and approved tutors can offer to help.", "Bientôt, tu pourras publier ce pour quoi ton enfant a besoin d’aide, et des tuteurs approuvés pourront proposer leur aide.")
         : t("Soon you’ll be able to post what you need help with, and approved tutors can offer to help.", "Bientôt, tu pourras publier ce pour quoi tu as besoin d’aide, et des tuteurs approuvés pourront proposer leur aide.")),
-      h("span", { class: "tag gr" }, t("Coming next", "À venir")))];
+      h("span", { class: "tag gr" }, t("Coming next", "À venir"))),
+    h("div", { class: "c" }, h("h3", {}, t("Your profile", "Ton profil")),
+      h("p", { class: "mu" }, t("Add your level, languages and school (optional) so we can suggest the right tutors.", "Ajoute ton niveau, tes langues et ton école (facultatif) pour qu’on te suggère les bons tuteurs.")),
+      h("a", { class: "btn sm g", href: "#/profile" }, t("Edit my profile", "Modifier mon profil")))];
 }
 
 function tutorCards() {
@@ -127,9 +130,9 @@ function tutorCards() {
       h("p", { class: "mu", style: "margin:8px 0 0" }, t("Students see you only when you are approved and this is on.", "Les élèves te voient seulement si tu es approuvé et que ceci est activé."))),
     h("div", { class: "c" }, h("h3", {}, t("Your profile", "Ton profil")),
       missing.length
-        ? h("p", { class: "mu" }, t("Still missing: ", "Il manque encore : ") + missing.join(", ") + ". " + t("Profile editing arrives in the next update.", "La modification du profil arrive dans la prochaine mise à jour."))
-        : h("p", { class: "mu" }, t("Your profile has the basics.", "Ton profil a l’essentiel.")),
-      h("span", { class: "tag gr" }, t("Coming next: Find students", "À venir : Trouver des élèves")))];
+        ? h("p", { class: "mu" }, t("Still missing: ", "Il manque encore : ") + missing.join(", ") + ".")
+        : h("p", { class: "mu" }, t("Your profile has the basics. Add subjects and schools so students can find you.", "Ton profil a l’essentiel. Ajoute des matières et des écoles pour que les élèves te trouvent.")),
+      h("a", { class: "btn sm", href: "#/profile" }, t("Edit my profile", "Modifier mon profil")))];
 }
 
 function otherRoleCard() {

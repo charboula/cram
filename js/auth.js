@@ -82,7 +82,7 @@ function authModal(mode, joinAs) {
           account_kind: f.joinAs === "parent" ? "parent" : "self",
           display_name: f.name.trim(),
           birth_date: dob.value };
-        const { data, error } = await SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname } });
+        const { data, error } = await withTimeout(SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname } }), 20000);
         if (error) throw error;
         if (data.user && data.user.identities && data.user.identities.length === 0) { er.textContent = t("That email already has an account. Try logging in.", "Ce courriel a déjà un compte. Essaie de te connecter."); return; }
         if (!data.session) {
@@ -93,13 +93,14 @@ function authModal(mode, joinAs) {
         }
         await signedIn(data.session);
       } else {
-        const { data, error } = await SB.auth.signInWithPassword({ email, password: pw.value });
+        const { data, error } = await withTimeout(SB.auth.signInWithPassword({ email, password: pw.value }), 20000);
         if (error) throw error;
         await signedIn(data.session);
       }
     } catch (e) {
       const m = String((e && e.message) || "");
-      er.textContent = /invalid login/i.test(m) ? t("Wrong email or password.", "Courriel ou mot de passe incorrect.")
+      er.textContent = m === "timeout" ? t("The connection is slow. Check your internet and try again.", "La connexion est lente. Vérifie ton Internet et réessaie.")
+        : /invalid login/i.test(m) ? t("Wrong email or password.", "Courriel ou mot de passe incorrect.")
         : /not confirmed/i.test(m) ? t("Please confirm your email first. Check your inbox for the link.", "Confirme d’abord ton courriel. Cherche le lien dans ta boîte de réception.")
         : /rate limit|too many/i.test(m) ? t("Too many tries. Please wait a minute and try again.", "Trop d’essais. Attends une minute et réessaie.")
         : /database error/i.test(m) ? t("We couldn’t create this account. Check your date of birth and try again.", "Impossible de créer ce compte. Vérifie ta date de naissance et réessaie.")

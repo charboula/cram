@@ -103,14 +103,29 @@ function renderChrome() {
   acct();
 }
 
+// "Loading…" placeholder. If a page is still showing it after 15 seconds, route() replaces it with a clear message.
+const loadingView = text => h("section", { class: "loading" }, h("p", { class: "mu" }, text || t("Loading…", "Chargement…")));
+function showProblem() {
+  V.replaceChildren(h("section", {}, h("div", { class: "c" },
+    h("h3", {}, t("This page didn’t load", "Cette page ne s’est pas chargée")),
+    h("p", { class: "mu" }, t("Check your internet connection and refresh. If it keeps happening, Cram’s database may be missing its latest update.", "Vérifie ta connexion Internet et actualise. Si ça continue, la base de données de Cram n’a peut-être pas sa dernière mise à jour.")),
+    h("button", { class: "btn sm", onclick: () => location.reload() }, t("Refresh", "Actualiser")))));
+}
+let routeToken = 0;
+
 function route(focus) {
   const [, r = "", arg] = cur.split("/");
+  const token = ++routeToken;
   if (!$("#modal").hidden) modal.close();
   renderChrome();
   document.title = (PAGE_TITLES[r] ? PAGE_TITLES[r]() : "Cram") + " · Cram";
-  if (NEED_LOGIN.has(r) && !AUTH_READY) V.replaceChildren(h("section", {}, h("p", { class: "mu" }, t("Loading…", "Chargement…"))));
-  else if (NEED_LOGIN.has(r) && !ME) needLogin();
-  else (ROUTES[r] || nf)(arg);
+  const failed = e => { console.error(e); if (token === routeToken) showProblem(); };
+  try {
+    if (NEED_LOGIN.has(r) && !AUTH_READY) V.replaceChildren(loadingView());
+    else if (NEED_LOGIN.has(r) && !ME) needLogin();
+    else { const p = (ROUTES[r] || nf)(arg); if (p && p.catch) p.catch(failed); }
+  } catch (e) { failed(e); }
+  setTimeout(() => { if (token === routeToken && V.querySelector(".loading")) showProblem(); }, 15000);
   V.style.animation = "none"; V.offsetHeight; V.style.animation = ""; // replay the fade-in
   window.scrollTo(0, 0);
   if (focus) V.focus({ preventScroll: true });
@@ -162,4 +177,9 @@ function start() {
     if (el) el.style.setProperty("--p", Math.min(1, Math.max(0, scrollY / (el.offsetHeight * 0.8))));
   }, { passive: true });
   route();
+  // Safety net: if we still don't know who is logged in after 8 seconds, stop waiting and show the page anyway
+  setTimeout(() => { if (!AUTH_READY) { AUTH_READY = true; refreshForUser(); } }, 8000);
 }
+
+// Rejects if something takes longer than ms (so a button never spins forever)
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);

@@ -3,6 +3,7 @@
 -- Where to run it: Supabase dashboard > SQL Editor > New query > paste > Run
 -- Safe to run once on a NEW project. It makes tables, security rules (RLS),
 -- a sign-up helper, the institution search, the waitlist, and a small starter list.
+-- After this, run the numbered update files in order (supabase-update-2.sql, then 3, ...).
 -- Updated Nov 20, 2026: tutors need YOUR approval before they appear publicly,
 -- the website waitlist saves here, and a few safety tweaks.
 -- =====================================================================

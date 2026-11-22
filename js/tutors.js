@@ -11,7 +11,7 @@ const tutorName = x => (x.profiles && x.profiles.display_name) || t("Tutor", "Tu
 const rateOf = x => (x.hourly_rate_cents ? x.hourly_rate_cents / 100 : null);
 const initials = n => n.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
 const avatar = (x, size = 52) => h("div", { class: "av", style: "width:" + size + "px;height:" + size + "px;font-size:" + Math.round(size * 0.35) + "px;background:" + ["#7E1D3C", "#2F4B8F", "#1F7A6B", "#7A4B1F", "#5B3A8F"][[...x.user_id].reduce((a, c) => a + c.charCodeAt(0), 0) % 5] }, initials(tutorName(x)));
-const verifyTag = v => v === "verified" ? h("span", { class: "tag ok" }, "✓ " + t("Verified by Cram", "Vérifié par Cram"))
+const verifyTag = v => v === "verified" ? h("span", { class: "tag ok" }, "✓ " + t(`Verified by ${BRAND}`, `Vérifié par ${BRAND}`))
   : h("span", { class: "tag gr" }, t("Self-reported, not verified", "Déclaré, non vérifié"));
 const yearsText = s => s.is_current ? (s.start_year ? s.start_year + " – " : "") + t("now", "aujourd’hui") : [s.start_year, s.end_year].filter(Boolean).join(" – ");
 
@@ -35,7 +35,11 @@ function matchTutor(x, F) {
   const q = F.q.trim().toLowerCase(), squash = s => s.toLowerCase().replace(/[\s-]/g, "");
   if (q) {
     const hits = subs.filter(s => [s.subjects && s.subjects.name_en, s.subjects && s.subjects.name_fr, s.course_code].some(v => v && v.toLowerCase().includes(q)));
-    if (!hits.length && !(x.headline || "").toLowerCase().includes(q)) return null;
+    // A known course code (e.g. 201-NYA-05): tutors who listed only the subject (Calculus) still count, just lower
+    const course = !hits.length && courseByCode(q);
+    const sameSubject = course && course.subject ? subs.filter(s => s.subjects && s.subjects.name_en === course.subject) : [];
+    if (sameSubject.length) { score += 1; reasons.push(t("Teaches ", "Enseigne ") + subjectName(sameSubject[0].subjects) + t(" (not this exact course)", " (pas ce cours précis)")); }
+    else if (!hits.length && !(x.headline || "").toLowerCase().includes(q)) return null;
     const exact = hits.find(s => s.course_code && squash(s.course_code) === squash(q));
     if (exact) {
       score += 3;
@@ -81,7 +85,7 @@ async function findPage(arg) {
 
   const sel = (key, placeholder, options) => h("select", { "aria-label": placeholder, onchange: e => { F[key] = e.target.value; draw(); } },
     h("option", { value: "" }, placeholder), ...options.map(([v, en, fr]) => h("option", { value: v, selected: F[key] === v }, t(en, fr))));
-  const search = h("input", { type: "text", value: F.q, placeholder: t("Subject, skill or course code, e.g. Calculus or MATH 140", "Matière, compétence ou code de cours, ex. Calcul ou MATH 140"),
+  const search = h("input", { type: "text", value: F.q, placeholder: t("Course code or subject, e.g. 201-NYA-05, MATH 140, Chemistry", "Code de cours ou matière, ex. 201-NYA-05, MATH 140, Chimie"),
     "aria-label": t("Search tutors", "Chercher un tuteur"), oninput: e => { F.q = e.target.value; clearTimeout(search.timer); search.timer = setTimeout(draw, 200); } });
   const budget = h("input", { type: "number", min: 5, max: 200, value: F.budget, placeholder: t("Any", "Tous"), "aria-label": t("Max $ per hour", "Max $ de l’heure"),
     oninput: e => { F.budget = e.target.value ? Number(e.target.value) : ""; draw(); } });
@@ -104,7 +108,7 @@ async function findPage(arg) {
     drawCompareBar();
     if (!tutors.length) {
       out.append(h("div", { class: "c" }, h("h3", {}, t("No tutors yet", "Aucun tuteur pour l’instant")),
-        h("p", { class: "mu" }, t("Cram is just starting. Tutors appear here once they finish their profile and Cram approves them.", "Cram commence tout juste. Les tuteurs apparaissent ici une fois leur profil terminé et approuvé par Cram.")),
+        h("p", { class: "mu" }, t(`${BRAND} is just starting. Tutors appear here once they finish their profile and ${BRAND} approves them.`, `${BRAND} commence tout juste. Les tuteurs apparaissent ici une fois leur profil terminé et approuvé par ${BRAND}.`)),
         h("button", { class: "btn sm g", onclick: () => (ME ? go("#/dashboard") : authModal("signup", "tutor")) }, t("Become a tutor", "Devenir tuteur"))));
       return;
     }
@@ -117,8 +121,8 @@ async function findPage(arg) {
 
   V.replaceChildren(h("section", {},
     h("h2", {}, t("Find a tutor", "Trouver un tuteur")),
-    h("p", { class: "sub" }, t("Every tutor here was approved by Cram. Tutors from your school are shown first, but anyone qualified can help.", "Chaque tuteur ici a été approuvé par Cram. Ceux de ton école passent en premier, mais toute personne qualifiée peut aider.")),
-    h("div", { class: "sbox", style: "max-width:none;margin:0" }, search),
+    h("p", { class: "sub" }, t(`Every tutor here was approved by ${BRAND}. Tutors from your school are shown first, but anyone qualified can help.`, `Chaque tuteur ici a été approuvé par ${BRAND}. Ceux de ton école passent en premier, mais toute personne qualifiée peut aider.`)),
+    courseBox(search, c => { F.q = courseQuery(c); draw(); }, "sbox wide"),
     h("div", { class: "fil" },
       h("div", {}, h("label", { class: "f" }, t("Level", "Niveau")), sel("level", t("Any level", "Tout niveau"), LEVELS)),
       h("div", {}, h("label", { class: "f" }, t("Max $/hour", "Max $/heure")), budget),
@@ -169,7 +173,7 @@ function showCompare() {
       row(t("Usually free", "Généralement libre"), x => (x.availability || []).map(s => label(SLOTS, s)).join(", ")),
       row(t("Subjects", "Matières"), x => (x.tutor_subjects || []).map(s => subjectName(s.subjects) + (s.course_code ? " (" + s.course_code + ")" : "")).join(", ")),
       row(t("Schools", "Écoles"), x => (x.tutor_institutions || []).map(i => schoolName(i.institutions)).join(", ")),
-      row(t("Verification", "Vérification"), x => x.verification_status === "verified" ? t("Verified by Cram", "Vérifié par Cram") : t("Self-reported", "Déclaré")))),
+      row(t("Verification", "Vérification"), x => x.verification_status === "verified" ? t(`Verified by ${BRAND}`, `Vérifié par ${BRAND}`) : t("Self-reported", "Déclaré")))),
     h("button", { class: "btn g", style: "margin-top:12px", onclick: () => modal.close() }, t("Close", "Fermer")));
   $("#modal .c").classList.add("wide");
 }
@@ -207,7 +211,7 @@ async function tutorPage(id) {
       box(t("Usually free", "Généralement libre"), h("p", { class: "mu", style: "margin:0" }, (x.availability || []).map(s => label(SLOTS, s)).join(", ") || "–"))),
     x.bio ? h("div", { class: "c", style: "margin-top:14px" }, h("h3", {}, t("About", "À propos")), h("p", { style: "white-space:pre-line;margin:8px 0 0" }, x.bio)) : null,
     reviews,
-    h("p", { class: "mu", style: "margin-top:14px" }, t("“Verified” appears only after Cram checks an official document. Everything else is self-reported by the tutor.", "« Vérifié » n’apparaît qu’après la vérification d’un document officiel par Cram. Le reste est déclaré par le tuteur."))));
+    h("p", { class: "mu", style: "margin-top:14px" }, t(`“Verified” appears only after ${BRAND} checks an official document. Everything else is self-reported by the tutor.`, `« Vérifié » n’apparaît qu’après la vérification d’un document officiel par ${BRAND}. Le reste est déclaré par le tuteur.`))));
 }
 
 ROUTES.find = findPage;

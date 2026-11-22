@@ -36,7 +36,7 @@ async function reviewsBox(tutorId) {
     const list = error ? [] : data || [];
     const avg = list.length ? (list.reduce((a, r) => a + r.rating, 0) / list.length).toFixed(1) : null;
     box.replaceChildren(h("h3", {}, t("Reviews", "Avis") + (avg ? " · ★ " + avg + " (" + list.length + ")" : "")),
-      h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t("Only students who completed a session with this tutor on Cram can leave a review.", "Seuls les élèves qui ont terminé une séance avec ce tuteur sur Cram peuvent laisser un avis.")),
+      h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t(`Only students who completed a session with this tutor on ${BRAND} can leave a review.`, `Seuls les élèves qui ont terminé une séance avec ce tuteur sur ${BRAND} peuvent laisser un avis.`)),
       ...(list.length ? list.map(r => h("div", { style: "padding:10px 0;border-top:1px solid var(--ln)" },
         h("div", { class: "row sp" }, h("b", { style: "color:var(--ac)", "aria-label": r.rating + "/5" }, stars(r.rating)), h("span", { class: "mu" }, new Date(r.created_at).toLocaleDateString(lang === "fr" ? "fr-CA" : "en-CA", { month: "long", year: "numeric" }))),
         r.comment ? h("p", { style: "margin:6px 0 0;white-space:pre-line" }, r.comment) : null))
@@ -116,7 +116,7 @@ function proposeSession(c, redraw) {
     modal.close(); toast(t("Session proposed", "Séance proposée")); redraw();
   };
   modal(h("h3", { style: "margin-bottom:8px" }, t("Propose a session", "Proposer une séance")),
-    h("p", { class: "mu", style: "font-size:13px" }, t("The other person confirms or declines. Payment isn’t handled by Cram yet: settle it between you, and never pay before you have met.", "L’autre personne confirme ou refuse. Cram ne gère pas encore les paiements : réglez-les entre vous, et ne payez jamais avant de vous être rencontrés.")),
+    h("p", { class: "mu", style: "font-size:13px" }, t(`The other person confirms or declines. Payment isn’t handled by ${BRAND} yet: settle it between you, and never pay before you have met.`, `L’autre personne confirme ou refuse. ${BRAND} ne gère pas encore les paiements : réglez-les entre vous, et ne payez jamais avant de vous être rencontrés.`)),
     h("div", { style: "display:grid;gap:10px" },
       h("div", {}, h("label", { class: "f" }, t("Date and time", "Date et heure")), when),
       h("div", { class: "g2", style: "gap:10px" }, h("div", {}, h("label", { class: "f" }, t("Length", "Durée")), mins), h("div", {}, h("label", { class: "f" }, t("Format", "Format")), fmt)),

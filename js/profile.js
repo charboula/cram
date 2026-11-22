@@ -80,7 +80,7 @@ function suggestSchool(prefill) {
     toast(t("Thanks! We’ll review it soon.", "Merci! On la vérifiera bientôt."));
   };
   modal(h("h3", { style: "margin-bottom:10px" }, t("Suggest a school", "Suggérer une école")),
-    h("p", { class: "mu" }, t("Cram reviews every suggestion before it appears in search.", "Cram vérifie chaque suggestion avant qu’elle apparaisse dans la recherche.")),
+    h("p", { class: "mu" }, t(`${BRAND} reviews every suggestion before it appears in search.`, `${BRAND} vérifie chaque suggestion avant qu’elle apparaisse dans la recherche.`)),
     ...input(t("School name", "Nom de l’école"), "name"), ...input(t("City", "Ville"), "city"),
     h("label", { class: "f" }, t("Type", "Type")), type, ...input(t("Website (optional)", "Site Web (facultatif)"), "website"), er,
     h("div", { class: "row", style: "margin-top:12px;justify-content:flex-end" },
@@ -116,35 +116,57 @@ async function profilePage() {
   const failed = [p, sp, tp, subs, schools, subjectList].find(r => r && r.error);
   if (failed) {
     V.replaceChildren(h("section", {}, h("div", { class: "c" }, h("h3", {}, t("Profiles aren’t switched on yet", "Les profils ne sont pas encore activés")),
-      h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard.")),
+      h("p", { class: "mu" }, t(`${BRAND}’s database needs its latest update. Please try again later.`, `La base de données de ${BRAND} doit être mise à jour. Réessaie plus tard.`)),
       h("p", { class: "mu", style: "font-size:12px" }, t("Technical detail: ", "Détail technique : ") + (failed.error.message || String(failed.error))))));
     return;
   }
-  const sections = [aboutSection(p.data || {})];
-  if (ME.mode === "student" && sp.data) sections.push(studentSection(sp.data));
-  if (ME.mode === "tutor" && tp.data) sections.push(tutorSection(tp.data), tutorSubjectsSection(subs.data || [], subjectList.data || []), tutorSchoolsSection(schools.data || []));
+  // Forms with editable fields: one Save button at the bottom saves all of them at once
+  const forms = [aboutSection(p.data || {})];
+  if (ME.mode === "student" && sp.data) forms.push(studentSection(sp.data));
+  if (ME.mode === "tutor" && tp.data) forms.push(tutorSection(tp.data));
+  const sections = forms.map(x => x.el);
+  // Lists (subjects, schools) save each item as soon as you add it, so they stay separate
+  if (ME.mode === "tutor" && tp.data) sections.push(tutorSubjectsSection(subs.data || [], subjectList.data || []), tutorSchoolsSection(schools.data || []));
+  const saveAll = saveButton(t("Save changes", "Enregistrer les changements"), async () => {
+    const hadBirthDate = !!ME.birthDate;
+    for (const x of forms) { const error = await x.save(); if (error) return error; } // stops at the first problem and shows it
+    if (!hadBirthDate && ME.birthDate) setTimeout(() => { if (cur.startsWith("#/profile")) profilePage(); }, 800); // date of birth is saved for good: redraw without it
+    return null;
+  });
+  saveAll.className = "btn";
   const otherRole = ME.mode === "tutor" ? ME.roles.student : ME.roles.tutor;
-  V.replaceChildren(h("section", {},
+  V.replaceChildren(h("section", { class: "narrow" },
     h("h2", {}, t("My profile", "Mon profil")),
     h("p", { class: "sub" }, ME.mode === "tutor"
-      ? t("This is what students see once Cram approves you. Grades and schools are shown as self-reported.", "C’est ce que les élèves voient une fois que Cram t’a approuvé. Les notes et écoles sont indiquées comme déclarées.")
+      ? t(`This is what students see once ${BRAND} approves you. Grades and schools are shown as self-reported.`, `C’est ce que les élèves voient une fois que ${BRAND} t’a approuvé. Les notes et écoles sont indiquées comme déclarées.`)
       : t("Only you see this. Your school is shown to tutors only if you choose.", "Toi seul vois ceci. Ton école est montrée aux tuteurs seulement si tu le choisis.")),
     otherRole ? h("p", { class: "mu" }, ME.mode === "tutor" ? t("To edit your student profile, switch to student mode.", "Pour modifier ton profil élève, passe en mode élève.") : t("To edit your tutor profile, switch to tutor mode.", "Pour modifier ton profil tuteur, passe en mode tuteur.")) : null,
-    h("div", { style: "display:grid;gap:14px" }, ...sections)));
+    h("div", { style: "display:grid;gap:14px" }, ...sections.slice(0, forms.length),
+      h("div", { class: "savebar" }, saveAll, h("span", { class: "mu" }, t("Saves everything above in one go.", "Enregistre tout ce qui est au-dessus d’un coup."))),
+      ...sections.slice(forms.length))));
 }
 
 function aboutSection(p) {
   const f = { name: p.display_name || "", languages: [...(p.languages || [])] };
-  return h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, t("About you", "À propos de toi")),
-    field(t("Name shown on Cram", "Nom affiché sur Cram"), h("input", { type: "text", value: f.name, maxlength: 80, oninput: e => { f.name = e.target.value; } }),
+  // Date of birth is asked once (it can't be changed later), so it only shows here until it's saved
+  const dob = ME.birthDate ? null : datePicker(t("Date of birth", "Date de naissance"));
+  const save = async () => {
+    if (f.name.trim().length < 2) return { message: t("Please enter your name.", "Entre ton nom.") };
+    if (dob && dob.getValue()) {
+      const { error } = await SB.rpc("set_birth_date", { d: dob.getValue() });
+      if (error) return error;
+      ME.birthDate = dob.getValue();
+    } else if (dob && dob.partly()) return { message: t("Finish your date of birth (day, month and year), or leave it empty.", "Complète ta date de naissance (jour, mois et année), ou laisse-la vide.") };
+    const { error } = await SB.from("profiles").update({ display_name: f.name.trim(), languages: f.languages }).eq("id", ME.id);
+    if (!error) { ME.name = f.name.trim(); renderChrome(); }
+    return error;
+  };
+  return { save, el: h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, t("About you", "À propos de toi")),
+    field(t(`Name shown on ${BRAND}`, `Nom affiché sur ${BRAND}`), h("input", { type: "text", value: f.name, maxlength: 80, oninput: e => { f.name = e.target.value; } }),
       ME.mode === "tutor" ? t("Tip: first name and last initial, e.g. Maya C.", "Astuce : prénom et initiale du nom, ex. Maya C.") : null),
     field(t("Languages you speak", "Langues que tu parles"), chipPicker(LANGS, f.languages, t("Languages", "Langues"))),
-    h("div", {}, saveButton(t("Save", "Enregistrer"), async () => {
-      if (f.name.trim().length < 2) return { message: t("Please enter your name.", "Entre ton nom.") };
-      const { error } = await SB.from("profiles").update({ display_name: f.name.trim(), languages: f.languages }).eq("id", ME.id);
-      if (!error) { ME.name = f.name.trim(); renderChrome(); }
-      return error;
-    })));
+    dob ? field(t("Date of birth", "Date de naissance"), dob,
+      t(`Asked once, kept private. ${BRAND} uses it only for its safety rules for minors, and it can’t be changed later.`, `Demandée une fois, gardée privée. ${BRAND} s’en sert seulement pour ses règles de sécurité pour les mineurs, et elle ne peut pas être modifiée ensuite.`)) : null) };
 }
 
 function studentSection(sp) {
@@ -156,21 +178,31 @@ function studentSection(sp) {
   drawSchool();
   const level = h("select", { onchange: e => { f.level = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")),
     ...LEVELS.map(([v, en, fr]) => h("option", { value: v, selected: f.level === v }, t(en, fr))));
-  return h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, ME.kind === "parent" ? t("Your child’s studies", "Les études de ton enfant") : t("Your studies", "Tes études")),
+  const save = async () => {
+    const { error } = await SB.from("student_profiles").update({ level: f.level || null, institution_id: f.school ? f.school.id : null, show_institution_publicly: f.show }).eq("user_id", ME.id);
+    return error;
+  };
+  return { save, el: h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, ME.kind === "parent" ? t("Your child’s studies", "Les études de ton enfant") : t("Your studies", "Tes études")),
     field(t("Level", "Niveau"), level),
     field(t("School (optional)", "École (facultatif)"), schoolLine, t("Not in school? Leave this empty.", "Pas aux études? Laisse vide.")),
     h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap" },
-      h("input", { type: "checkbox", checked: f.show, onchange: e => { f.show = e.target.checked; } }), t("Show my school to tutors", "Montrer mon école aux tuteurs")),
-    h("div", {}, saveButton(t("Save", "Enregistrer"), async () => {
-      const { error } = await SB.from("student_profiles").update({ level: f.level || null, institution_id: f.school ? f.school.id : null, show_institution_publicly: f.show }).eq("user_id", ME.id);
-      return error;
-    })));
+      h("input", { type: "checkbox", checked: f.show, onchange: e => { f.show = e.target.checked; } }), t("Show my school to tutors", "Montrer mon école aux tuteurs"))) };
 }
 
 function tutorSection(tp) {
   const f = { headline: tp.headline || "", bio: tp.bio || "", rate: tp.hourly_rate_cents ? tp.hourly_rate_cents / 100 : "",
     online: tp.offers_online, inPerson: tp.offers_in_person, levels: [...(tp.levels || [])], availability: [...(tp.availability || [])] };
-  return h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, t("Your tutoring", "Ton tutorat")),
+  const save = async () => {
+    const rate = Math.round(Number(f.rate));
+    if (f.rate !== "" && !(rate >= 5 && rate <= 200)) return { message: t("Rate must be between $5 and $200.", "Le tarif doit être entre 5 $ et 200 $.") };
+    if (!f.online && !f.inPerson) return { message: t("Choose online, in person, or both.", "Choisis en ligne, en personne ou les deux.") };
+    const row = { headline: f.headline.trim() || null, bio: f.bio.trim() || null, hourly_rate_cents: f.rate === "" ? null : rate * 100,
+      offers_online: f.online, offers_in_person: f.inPerson, levels: f.levels, availability: f.availability };
+    const { error } = await SB.from("tutor_profiles").update(row).eq("user_id", ME.id);
+    if (!error) Object.assign(ME.tutor || (ME.tutor = {}), row);
+    return error;
+  };
+  return { save, el: h("div", { class: "c", style: "display:grid;gap:14px" }, h("h3", {}, t("Your tutoring", "Ton tutorat")),
     field(t("Headline", "Titre"), h("input", { type: "text", value: f.headline, maxlength: 120, placeholder: t("e.g. McGill math student, A in Calculus I", "ex. Étudiant en maths à McGill, A en Calcul I"), oninput: e => { f.headline = e.target.value; } })),
     field(t("About your tutoring", "À propos de ton tutorat"), h("textarea", { maxlength: 1000, oninput: e => { f.bio = e.target.value; } }, f.bio),
       t("Your experience and how you teach. Only real facts, please.", "Ton expérience et ta façon d’enseigner. Seulement des faits réels.")),
@@ -179,17 +211,15 @@ function tutorSection(tp) {
       h("label", { class: "row", style: "cursor:pointer" }, h("input", { type: "checkbox", checked: f.online, onchange: e => { f.online = e.target.checked; } }), t("Online", "En ligne")),
       h("label", { class: "row", style: "cursor:pointer" }, h("input", { type: "checkbox", checked: f.inPerson, onchange: e => { f.inPerson = e.target.checked; } }), t("In person", "En personne")))),
     field(t("Levels you teach", "Niveaux enseignés"), chipPicker(LEVELS, f.levels, t("Levels", "Niveaux"))),
-    field(t("When you’re usually free", "Quand tu es généralement libre"), chipPicker(SLOTS, f.availability, t("Availability", "Disponibilités"))),
-    h("div", {}, saveButton(t("Save", "Enregistrer"), async () => {
-      const rate = Math.round(Number(f.rate));
-      if (f.rate !== "" && !(rate >= 5 && rate <= 200)) return { message: t("Rate must be between $5 and $200.", "Le tarif doit être entre 5 $ et 200 $.") };
-      if (!f.online && !f.inPerson) return { message: t("Choose online, in person, or both.", "Choisis en ligne, en personne ou les deux.") };
-      const row = { headline: f.headline.trim() || null, bio: f.bio.trim() || null, hourly_rate_cents: f.rate === "" ? null : rate * 100,
-        offers_online: f.online, offers_in_person: f.inPerson, levels: f.levels, availability: f.availability };
-      const { error } = await SB.from("tutor_profiles").update(row).eq("user_id", ME.id);
-      if (!error) Object.assign(ME.tutor || (ME.tutor = {}), row);
-      return error;
-    })));
+    field(t("When you’re usually free", "Quand tu es généralement libre"), chipPicker(SLOTS, f.availability, t("Availability", "Disponibilités")))) };
+}
+
+// Picking a suggested course fills the course code and chooses the matching subject in the list
+function pickCourseInto(c, f, select, subjectList) {
+  f.code = c.code || "";
+  const s = subjectList.find(x => x.name_en === c.subject);
+  if (s) { f.subject = String(s.id); select.value = String(s.id); }
+  return f.code; // what the course box shows (empty for a general subject, which has no code)
 }
 
 function tutorSubjectsSection(list, subjectList) {
@@ -220,7 +250,8 @@ function tutorSubjectsSection(list, subjectList) {
     h("div", { style: "display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ln)" },
       h("b", {}, t("Add a subject", "Ajouter une matière")), subjectSelect,
       h("div", { class: "g2" },
-        h("input", { type: "text", maxlength: 30, placeholder: t("Course code (optional), e.g. MATH 140", "Code de cours (facultatif), ex. MATH 140"), "aria-label": t("Course code", "Code de cours"), oninput: e => { f.code = e.target.value; } }),
+        courseBox(h("input", { type: "text", maxlength: 30, placeholder: t("Course code or name (optional), e.g. 201-NYA-05", "Code ou nom du cours (facultatif), ex. 201-NYA-05"), "aria-label": t("Course code", "Code de cours"), oninput: e => { f.code = e.target.value; } }),
+          c => pickCourseInto(c, f, subjectSelect, subjectList)),
         h("input", { type: "text", maxlength: 5, placeholder: t("Your grade (optional), e.g. A", "Ta note (facultatif), ex. A"), "aria-label": t("Grade", "Note"), oninput: e => { f.grade = e.target.value; } })),
       schoolLine, er, h("div", {}, h("button", { class: "btn sm", onclick: add }, t("Add subject", "Ajouter la matière")))));
   return wrap;

@@ -3,20 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cram: find the right tutor, or the right students</title>
-<meta name="description" content="Cram connects students with approved tutors for any subject or skill, in English and French. Tutors can find students who need help.">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Cram: a tutor who already passed your course</title>
+<meta name="description" content="Montreal tutoring by course code: find a tutor who took your exact course at your school, in English or French.">
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible+Next:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/cram.css">
 </head>
 <body>
 <a class="skip" id="skip" href="#v" onclick="event.preventDefault();document.getElementById('v').focus()">Skip to main content</a>
-<header><div class="w bar"><a class="logo" href="#/" aria-label="Cram">Cr<span>am</span></a><nav id="nav" aria-label="Main"></nav><div class="rt"><button class="lang" id="lang" role="switch" aria-checked="false" aria-label="Français" data-l="en"><span class="e">EN</span><span class="f">FR</span></button><span id="acct" class="rt"></span></div></div></header>
+<header><div class="w bar"><a class="logo" id="logo" href="#/">Cram</a><nav id="nav" aria-label="Main"></nav><div class="rt"><button class="lang" id="lang" role="switch" aria-checked="false" aria-label="Français" data-l="en"><span class="e">EN</span><span class="f">FR</span></button><span id="acct" class="rt"></span></div></div></header>
 <main id="v" class="w" tabindex="-1"></main>
 <footer><div class="w" id="foot"></div></footer>
 <div id="toast" role="status"></div><div id="modal" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<!-- Cram's code, in load order: core (helpers + router), auth (accounts), pages (home + dashboards), profile (My profile + school search), tutors (Find tutors + tutor profiles), requests (My requests + Find students), messages (conversations), sessions (booking + reviews), account (report, delete account, privacy + terms) -->
+<!-- Cram's code, in load order: core (helpers + router), courses (course suggestions while typing), auth (accounts), pages (home + dashboards), profile (My profile + school search), tutors (Find tutors + tutor profiles), requests (My requests + Find students), messages (conversations), sessions (booking + reviews), account (report, delete account, privacy + terms) -->
 <script src="js/core.js"></script>
+<script src="js/courses.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/pages.js"></script>
 <script src="js/profile.js"></script>

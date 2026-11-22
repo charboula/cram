@@ -12,6 +12,11 @@ const SB = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
 const FROM_EMAIL_LINK = new URLSearchParams(location.search).has("code");
 const LINK_ERROR = /error/.test(location.search) || /^#error/.test(location.hash); // e.g. an expired confirmation link
 
+/* ===== Brand name =====
+   The site's name lives here, and every page reads it. To rename the site, change this one line.
+   ("Cram" is a working name.) Also update the <title> line in index.html, which shows for a split second while loading. */
+const BRAND = "Cram";
+
 /* ===== Language: t("English", "Français") picks the right one ===== */
 let lang = "en";
 try { lang = localStorage.getItem("cram_lang") || ((navigator.language || "").toLowerCase().startsWith("fr") ? "fr" : "en"); } catch (_) {}
@@ -98,10 +103,11 @@ function renderChrome() {
   $("#nav").replaceChildren(...navItems().map(([key, label]) =>
     h("a", { href: "#/" + key, class: r === key ? "on" : "", "aria-current": r === key ? "page" : null }, label)));
   $("#foot").replaceChildren(
-    t("© Cram · An independent student project, not affiliated with any school. ", "© Cram · Un projet étudiant indépendant, non affilié à une école. "),
+    t("© " + BRAND + " · An independent student project from Montreal, not affiliated with any school. ", "© " + BRAND + " · Un projet étudiant indépendant de Montréal, non affilié à une école. "),
     h("a", { href: "#/status" }, t("What’s real so far", "Ce qui est réel pour l’instant")), " · ",
     h("a", { href: "#/privacy" }, t("Privacy", "Confidentialité")), " · ",
     h("a", { href: "#/terms" }, t("Terms", "Conditions")));
+  $("#logo").textContent = BRAND;
   $("#skip").textContent = t("Skip to main content", "Passer au contenu principal");
   acct();
 }
@@ -111,7 +117,7 @@ const loadingView = text => h("section", { class: "loading" }, h("p", { class: "
 function showProblem() {
   V.replaceChildren(h("section", {}, h("div", { class: "c" },
     h("h3", {}, t("This page didn’t load", "Cette page ne s’est pas chargée")),
-    h("p", { class: "mu" }, t("Check your internet connection and refresh. If it keeps happening, Cram’s database may be missing its latest update.", "Vérifie ta connexion Internet et actualise. Si ça continue, la base de données de Cram n’a peut-être pas sa dernière mise à jour.")),
+    h("p", { class: "mu" }, t(`Check your internet connection and refresh. If it keeps happening, ${BRAND}’s database may be missing its latest update.`, `Vérifie ta connexion Internet et actualise. Si ça continue, la base de données de ${BRAND} n’a peut-être pas sa dernière mise à jour.`)),
     h("button", { class: "btn sm", onclick: () => location.reload() }, t("Refresh", "Actualiser")))));
 }
 let routeToken = 0;
@@ -121,7 +127,7 @@ function route(focus) {
   const token = ++routeToken;
   if (!$("#modal").hidden) modal.close();
   renderChrome();
-  document.title = (PAGE_TITLES[r] ? PAGE_TITLES[r]() : "Cram") + " · Cram";
+  document.title = (PAGE_TITLES[r] ? PAGE_TITLES[r]() : BRAND) + " · " + BRAND;
   const failed = e => { console.error(e); if (token === routeToken) showProblem(); };
   try {
     if (NEED_LOGIN.has(r) && !AUTH_READY) V.replaceChildren(loadingView());
@@ -155,8 +161,25 @@ function needLogin() {
 
 const nf = () => V.replaceChildren(h("section", {}, h("h2", {}, t("Page not found", "Page introuvable")), h("a", { class: "btn", href: "#/" }, t("Go home", "Accueil"))));
 
+/* ===== Intro: the name gets "highlighted" for about a second, once per visit =====
+   It sits on top of the page while the page loads underneath, so it never slows anything down.
+   Click or press any key to skip. Skipped for people who turned off animations on their device. */
+function intro() {
+  try { if (sessionStorage.getItem("intro_seen")) return; sessionStorage.setItem("intro_seen", "1"); } catch (_) { return; }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = h("div", { class: "intro", "aria-hidden": "true" },
+    h("div", { class: "intro-word" }, BRAND),
+    h("div", { class: "intro-line" }, t("Help from someone who already passed your course", "De l’aide de quelqu’un qui a déjà réussi ton cours")));
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 300); removeEventListener("keydown", close); };
+  el.onclick = close;
+  addEventListener("keydown", close);
+  document.body.append(el);
+  setTimeout(close, 1200);
+}
+
 /* ===== Start-up (called at the bottom of index.html once every file is loaded) ===== */
 function start() {
+  intro();
   if (LINK_ERROR) {
     cur = "#/";
     try { history.replaceState(null, "", location.pathname + "#/"); } catch (_) {}
@@ -175,13 +198,32 @@ function start() {
     e.preventDefault();
     go(a.getAttribute("href"));
   });
-  addEventListener("scroll", () => { // gentle fade of the home hero while scrolling
-    const el = document.getElementById("hero");
-    if (el) el.style.setProperty("--p", Math.min(1, Math.max(0, scrollY / (el.offsetHeight * 0.8))));
-  }, { passive: true });
   route();
   // Safety net: if we still don't know who is logged in after 8 seconds, stop waiting and show the page anyway
   setTimeout(() => { if (!AUTH_READY) { AUTH_READY = true; refreshForUser(); } }, 8000);
+}
+
+/* ===== Date picker: Day / Month / Year dropdowns (clearer than the browser's own date box, and the same on every phone) =====
+   datePicker("Date of birth") returns an element; el.getValue() gives "2005-03-14", or "" if it isn't complete and real.
+   el.partly() is true when only some of the three are chosen. */
+function datePicker(label, opts = {}) {
+  const now = new Date().getFullYear();
+  const from = opts.fromYear || now - 100, to = opts.toYear || now;
+  const monthName = m => new Date(2000, m, 1).toLocaleString(lang === "fr" ? "fr-CA" : "en-CA", { month: "long" });
+  const pick = (name, first, items) => h("select", { "aria-label": label + " : " + name }, h("option", { value: "" }, first), ...items);
+  const day = pick(t("day", "jour"), t("Day", "Jour"), Array.from({ length: 31 }, (_, i) => h("option", { value: i + 1 }, String(i + 1))));
+  const month = pick(t("month", "mois"), t("Month", "Mois"), Array.from({ length: 12 }, (_, i) => h("option", { value: i + 1 }, monthName(i))));
+  const year = pick(t("year", "année"), t("Year", "Année"), Array.from({ length: to - from + 1 }, (_, i) => h("option", { value: to - i }, String(to - i))));
+  const el = h("div", { class: "datepick", role: "group", "aria-label": label }, ...(lang === "fr" ? [day, month, year] : [month, day, year]));
+  const pad = n => String(n).padStart(2, "0");
+  el.getValue = () => {
+    if (!day.value || !month.value || !year.value) return "";
+    const d = new Date(Number(year.value), Number(month.value) - 1, Number(day.value));
+    if (d.getMonth() !== Number(month.value) - 1) return ""; // e.g. February 30 doesn't exist
+    return year.value + "-" + pad(month.value) + "-" + pad(day.value);
+  };
+  el.partly = () => [day, month, year].some(x => x.value) && !el.getValue();
+  return el;
 }
 
 // Rejects if something takes longer than ms (so a button never spins forever)

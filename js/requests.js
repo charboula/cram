@@ -93,6 +93,8 @@ async function newRequestPage() {
     ? h("div", { class: "row" }, h("b", {}, schoolName(f.school)), h("button", { type: "button", class: "btn sm g", onclick: () => { f.school = null; drawSchool(); } }, t("Remove", "Retirer")))
     : schoolPicker(s => { f.school = s; drawSchool(); }, t("Add your school (optional)", "Ajoute ton école (facultatif)")));
   drawSchool();
+  const subjectSelect = h("select", { onchange: e => { f.subject = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")),
+    ...cats.map(([c, en, fr]) => h("optgroup", { label: t(en, fr) }, ...(subjects || []).filter(s => s.category === c).map(s => h("option", { value: s.id }, subjectName(s))))));
   const send = async () => {
     if (!f.subject) { er.textContent = t("Choose a subject.", "Choisis une matière."); return; }
     if (f.details.trim().length < 10) { er.textContent = t("Say a bit more about what you need (at least 10 characters).", "Décris un peu plus ton besoin (au moins 10 caractères)."); return; }
@@ -105,15 +107,15 @@ async function newRequestPage() {
     toast(t("Request posted", "Demande publiée"));
     go("#/requests");
   };
-  V.replaceChildren(h("section", {},
+  V.replaceChildren(h("section", { class: "narrow" },
     h("a", { href: "#/requests", class: "bk" }, "‹ " + t("My requests", "Mes demandes")),
     h("h2", { style: "margin:10px 0 6px" }, ME.kind === "parent" ? t("Post a request for your child", "Publier une demande pour ton enfant") : t("Post a tutoring request", "Publier une demande de tutorat")),
     h("p", { class: "sub" }, t("Tutors see what you write here, but never your name, email or profile until you choose to connect.", "Les tuteurs voient ce que tu écris ici, mais jamais ton nom, ton courriel ou ton profil avant que tu choisisses de te connecter.")),
     h("div", { class: "c", style: "display:grid;gap:14px" },
-      field(t("Subject or skill", "Matière ou compétence"), h("select", { onchange: e => { f.subject = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")),
-        ...cats.map(([c, en, fr]) => h("optgroup", { label: t(en, fr) }, ...(subjects || []).filter(s => s.category === c).map(s => h("option", { value: s.id }, subjectName(s))))))),
+      field(t("Subject or skill", "Matière ou compétence"), subjectSelect),
       h("div", { class: "g2" },
-        field(t("Course code (optional)", "Code de cours (facultatif)"), h("input", { type: "text", maxlength: 30, placeholder: "MATH 140", oninput: e => { f.code = e.target.value; } })),
+        field(t("Course (optional)", "Cours (facultatif)"), courseBox(h("input", { type: "text", maxlength: 30, placeholder: t("Code or name, e.g. 201-NYB-05", "Code ou nom, ex. 201-NYB-05"), oninput: e => { f.code = e.target.value; } }),
+          c => pickCourseInto(c, f, subjectSelect, subjects || []))),
         field(t("Level", "Niveau"), h("select", { onchange: e => { f.level = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")), ...LEVELS.map(([v, en, fr]) => h("option", { value: v, selected: f.level === v }, t(en, fr)))))),
       field(t("What do you need help with?", "Sur quoi as-tu besoin d’aide?"), h("textarea", { maxlength: 600, placeholder: t("e.g. Exam on Dec 12, stuck on derivatives and related rates. Would like 2 or 3 sessions.", "ex. Examen le 12 déc., bloqué sur les dérivées. J’aimerais 2 ou 3 séances."), oninput: e => { f.details = e.target.value; } }),
         t("Don’t include your full name, phone, email or address.", "N’inclus pas ton nom complet, téléphone, courriel ou adresse.")),
@@ -155,7 +157,7 @@ function matchRequest(r, me) {
 async function studentsPage() {
   if (ME.mode !== "tutor") return V.replaceChildren(h("section", {}, h("div", { class: "c" }, h("p", {}, t("Switch to tutor mode to find students.", "Passe en mode tuteur pour trouver des élèves.")))));
   const blocked = (title, text) => V.replaceChildren(h("section", {}, h("h2", {}, t("Find students", "Trouver des élèves")), h("div", { class: "c", style: "margin-top:12px" }, h("h3", {}, title), h("p", { class: "mu" }, text), h("a", { class: "btn sm g", href: "#/dashboard" }, t("Go to my dashboard", "Aller au tableau de bord")))));
-  if (!ME.tutor || !ME.tutor.approved) return blocked(t("Available once Cram approves you", "Disponible une fois approuvé par Cram"), t("To protect students, only tutors approved by Cram can see requests. Complete your profile and we’ll review it.", "Pour protéger les élèves, seuls les tuteurs approuvés par Cram voient les demandes. Complète ton profil et on le vérifiera."));
+  if (!ME.tutor || !ME.tutor.approved) return blocked(t(`Available once ${BRAND} approves you`, `Disponible une fois approuvé par ${BRAND}`), t(`To protect students, only tutors approved by ${BRAND} can see requests. Complete your profile and we’ll review it.`, `Pour protéger les élèves, seuls les tuteurs approuvés par ${BRAND} voient les demandes. Complète ton profil et on le vérifiera.`));
   if (!ME.birthDate || ageFrom(ME.birthDate) < 18) return blocked(t("Confirm you’re 18 or older", "Confirme que tu as 18 ans ou plus"), t("Add your date of birth on your dashboard. Only adult tutors can see student requests.", "Ajoute ta date de naissance sur ton tableau de bord. Seuls les tuteurs adultes voient les demandes."));
   V.replaceChildren(loadingView());
   const [tp, subs, prof, reqs, mine] = await Promise.all([
@@ -190,7 +192,8 @@ async function studentsPage() {
     h("p", { class: "sub" }, t("Requests from students who chose to be found. Recommended ones match the subjects, levels and rate on your profile.", "Des demandes d’élèves qui ont choisi d’être trouvés. Les recommandées correspondent aux matières, niveaux et tarif de ton profil.")),
     me.subjects.length ? null : h("p", {}, h("a", { href: "#/profile" }, t("Add subjects to your profile to get recommendations.", "Ajoute des matières à ton profil pour recevoir des recommandations."))),
     h("div", { class: "fil" },
-      h("div", { style: "flex:2" }, h("label", { class: "f" }, t("Search", "Recherche")), h("input", { type: "text", value: F.q, placeholder: t("Subject, course code or keyword", "Matière, code de cours ou mot-clé"), oninput: e => { F.q = e.target.value; draw(); } })),
+      h("div", { style: "flex:2" }, h("label", { class: "f" }, t("Search", "Recherche")), courseBox(h("input", { type: "text", value: F.q, placeholder: t("Subject, course code or keyword", "Matière, code de cours ou mot-clé"), oninput: e => { F.q = e.target.value; draw(); } }),
+        c => { F.q = courseQuery(c); draw(); })),
       h("div", {}, h("label", { class: "f" }, t("Level", "Niveau")), sel("level", t("Any level", "Tout niveau"), LEVELS)),
       h("div", {}, h("label", { class: "f" }, t("Format", "Format")), sel("format", t("Any format", "Tout format"), FORMATS.slice(1)))),
     out));

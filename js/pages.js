@@ -90,7 +90,7 @@ function home() {
 function homeSearch() {
   const inp = h("input", { type: "text", placeholder: t("Course code or subject, e.g. 201-NYA-05, MATH 140, Chemistry", "Code de cours ou matière, ex. 201-NYA-05, MATH 140, Chimie"),
     "aria-label": t("Search tutors", "Chercher un tuteur"), onkeydown: e => { if (e.key === "Enter" && inp.value.trim()) go("#/find/" + encodeURIComponent(inp.value.trim())); } });
-  return courseBox(inp, c => go("#/find/" + encodeURIComponent(courseQuery(c))), "sbox");
+  return courseBox(inp, c => go("#/find/" + encodeURIComponent(courseQuery(c))), "sbox", text => go("#/find/" + encodeURIComponent(text)));
 }
 
 /* ===== Dashboard (one page; what it shows depends on student or tutor mode) ===== */

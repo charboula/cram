@@ -161,8 +161,25 @@ function needLogin() {
 
 const nf = () => V.replaceChildren(h("section", {}, h("h2", {}, t("Page not found", "Page introuvable")), h("a", { class: "btn", href: "#/" }, t("Go home", "Accueil"))));
 
+/* ===== Intro: the name gets "highlighted" for about a second, once per visit =====
+   It sits on top of the page while the page loads underneath, so it never slows anything down.
+   Click or press any key to skip. Skipped for people who turned off animations on their device. */
+function intro() {
+  try { if (sessionStorage.getItem("intro_seen")) return; sessionStorage.setItem("intro_seen", "1"); } catch (_) { return; }
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = h("div", { class: "intro", "aria-hidden": "true" },
+    h("div", { class: "intro-word" }, BRAND),
+    h("div", { class: "intro-line" }, t("Help from someone who already passed your course", "De l’aide de quelqu’un qui a déjà réussi ton cours")));
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 300); removeEventListener("keydown", close); };
+  el.onclick = close;
+  addEventListener("keydown", close);
+  document.body.append(el);
+  setTimeout(close, 1200);
+}
+
 /* ===== Start-up (called at the bottom of index.html once every file is loaded) ===== */
 function start() {
+  intro();
   if (LINK_ERROR) {
     cur = "#/";
     try { history.replaceState(null, "", location.pathname + "#/"); } catch (_) {}

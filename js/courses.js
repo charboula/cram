@@ -158,8 +158,10 @@ const courseByCode = q => { const sq = squash(q); return sq ? COURSE_LIST.find(c
 /* ===== The drop-down under a search box =====
    courseBox(input, onPick) wraps an existing text box and adds suggestions. onPick(course) runs when one is chosen;
    if it returns text, the box shows that text instead.
+   The last row is always "Other: use what I typed", for courses that aren't in the list. onOther(text) runs when it's chosen
+   (if not given, the typed text simply stays in the box).
    Works with the mouse, a finger, or the keyboard (↓ ↑ to move, Enter to pick, Esc to close). */
-function courseBox(inp, onPick, cls = "acwrap") {
+function courseBox(inp, onPick, cls = "acwrap", onOther) {
   const res = h("div", { class: "sres", role: "listbox", hidden: true });
   const box = h("div", { class: cls }, inp, res);
   inp.setAttribute("autocomplete", "off");
@@ -169,8 +171,8 @@ function courseBox(inp, onPick, cls = "acwrap") {
   const show = open => { res.hidden = !open; inp.setAttribute("aria-expanded", String(open)); };
   const pick = c => { inp.value = courseQuery(c); show(false); const v = onPick(c); if (typeof v === "string") inp.value = v; inp.focus(); };
   const draw = () => {
-    const list = findCourses(inp.value);
-    if (!list.length || inp.value.trim().length < 1) { show(false); return; }
+    const list = findCourses(inp.value), typed = inp.value.trim();
+    if (!typed || (!list.length && typed.length < 2)) { show(false); return; }
     const pq = plain(inp.value);
     res.replaceChildren(...list.map(c => {
       const otherName = lang === "fr" ? c.en : c.fr;
@@ -178,7 +180,9 @@ function courseBox(inp, onPick, cls = "acwrap") {
       return h("button", { type: "button", role: "option", onmousedown: e => e.preventDefault(), onclick: () => pick(c) },
         h("b", {}, courseName(c)), viaOther ? h("span", { class: "mu" }, " · " + otherName) : null,
         c.code ? h("small", { class: "acmeta" }, h("span", { class: "code" }, c.code), " " + courseSchool(c)) : h("small", { class: "acmeta" }, t("Subject", "Matière")));
-    }));
+    }), h("button", { type: "button", role: "option", class: "acother", onmousedown: e => e.preventDefault(),
+      onclick: () => { show(false); inp.focus(); if (onOther) onOther(typed); } },
+      h("b", {}, t("Other: ", "Autre : ") + "“" + typed + "”"), h("small", { class: "acmeta" }, t("Not in the list? Use it as you typed it.", "Pas dans la liste? Utilise-le tel quel."))));
     show(true);
   };
   const oldInput = inp.oninput;

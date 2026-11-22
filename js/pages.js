@@ -2,67 +2,93 @@
 
 /* ===== Home ===== */
 function home() {
-  const heading = (en, fr, subEn, subFr) => [h("h2", { class: "rv" }, t(en, fr)), subEn ? h("p", { class: "sub rv" }, t(subEn, subFr)) : null];
-  const steps = (list) => h("ol", { class: "steps" }, ...list.map(([a, b, c, d]) =>
-    h("li", {}, h("b", {}, t(a, b)), h("div", { class: "mu" }, t(c, d)))));
-  const studentSteps = [
-    ["Search by subject or skill", "Cherche par matière ou compétence", "Calculus, French, Python, Excel, piano… Filter by budget, level, language and online or in person.", "Calcul, français, Python, Excel, piano… Filtre par budget, niveau, langue, en ligne ou en personne."],
-    ["Compare real profiles", "Compare de vrais profils", "See each tutor’s schools, subjects, rate and availability, and why they match what you need.", "Vois les écoles, matières, tarifs et disponibilités de chaque tuteur, et pourquoi il correspond à ton besoin."],
-    ["Contact a tutor or post a request", "Contacte un tuteur ou publie une demande", "Message a tutor, or describe what you need and let qualified tutors come to you.", "Écris à un tuteur, ou décris ton besoin et laisse les tuteurs qualifiés venir à toi."]];
-  const tutorSteps = [
-    ["Create your profile", "Crée ton profil", "Your subjects, current and past schools, languages, rate and availability.", "Tes matières, tes écoles actuelles et passées, tes langues, ton tarif et tes disponibilités."],
-    ["Get approved by Cram", "Fais-toi approuver par Cram", "We review every tutor before they appear to students.", "On vérifie chaque tuteur avant qu’il apparaisse aux élèves."],
-    ["Find students", "Trouve des élèves", "Browse requests that match what you know and offer to help.", "Parcours les demandes qui correspondent à ce que tu connais et propose ton aide."]];
-  const audiences = [
-    ["Students", "Élèves et étudiants", "High school, CEGEP or university. Find help for a course, an exam or a whole term.", "Secondaire, cégep ou université. Trouve de l’aide pour un cours, un examen ou une session entière.", "#/find", t("Find a tutor", "Trouver un tuteur")],
-    ["Parents and guardians", "Parents et tuteurs légaux", "Compare tutors before anyone meets your child, and post requests on their behalf.", "Compare les tuteurs avant qu’ils rencontrent ton enfant, et publie des demandes en son nom.", null, t("Create a parent account", "Créer un compte parent"), "parent"],
-    ["Adults and professionals", "Adultes et professionnels", "Languages, coding, Excel, music. No school needed to use Cram.", "Langues, programmation, Excel, musique. Pas besoin d’être aux études pour utiliser Cram.", "#/find", t("Find a tutor", "Trouver un tuteur")],
-    ["Tutors", "Tuteurs", "Turn what you know into income. Set your own rate and hours.", "Transforme ce que tu sais en revenu. Fixe ton tarif et tes heures.", null, t("Become a tutor", "Devenir tuteur"), "tutor"]];
-  const faq = [
-    ["Is Cram free?", "Cram est-il gratuit?", "Creating an account and browsing are free. Tutors set their own rates.", "Créer un compte et parcourir sont gratuits. Les tuteurs fixent leurs propres tarifs."],
-    ["Can I get free help instead?", "Puis-je obtenir de l’aide gratuite?", "Yes. Many schools and libraries offer free help, and it is a good place to start. Cram suits you if you want a tutor who knows your exact course or skill and a regular time slot.", "Oui. Beaucoup d’écoles et de bibliothèques offrent de l’aide gratuite, et c’est un bon point de départ. Cram te convient si tu veux un tuteur qui connaît ton cours ou ta compétence et une plage régulière."],
-    ["How do I know a tutor is qualified?", "Comment savoir qu’un tuteur est qualifié?", "Cram approves every tutor before they appear. Courses, grades and schools are self-reported and labelled that way. A “Verified” badge appears only after Cram checks an official document.", "Cram approuve chaque tuteur avant qu’il apparaisse. Les cours, notes et écoles sont déclarés et indiqués comme tels. Le badge « Vérifié » n’apparaît qu’après la vérification d’un document officiel par Cram."],
-    ["Can students under 18 use Cram?", "Les moins de 18 ans peuvent-ils utiliser Cram?", "Students 14 and older can create an account. Under 14, a parent or guardian creates it. Requests from students under 18 are never shown to tutors; a parent can post one for them instead. All tutors are adults.", "Les élèves de 14 ans et plus peuvent créer un compte. Avant 14 ans, un parent ou tuteur légal le crée. Les demandes des moins de 18 ans ne sont jamais montrées aux tuteurs; un parent peut en publier une à leur place. Tous les tuteurs sont majeurs."],
-    ["Is it safe to meet a tutor?", "Est-ce sécuritaire de rencontrer un tuteur?", "Choose online, or meet in a public place like a library, and keep your messages inside Cram.", "Choisis l’en ligne ou un lieu public comme une bibliothèque, et garde tes messages dans Cram."]];
+  const B = BRAND;
   const join = role => () => (ME ? go("#/dashboard") : authModal("signup", role));
+  const mark = s => h("mark", {}, s); // highlighter effect on a few key words
+  const code = s => h("span", { class: "code" }, s); // course codes, in the typewriter font
+
+  // Three steps for students, written the way a student would explain it to a friend
+  const studentSteps = [
+    ["Type your course code", "Tape ton code de cours", "Like 201-NYA-05 or MATH 140. No code? Just type the subject: Calculus, Organic chem, Python.", "Comme 201-NYA-05 ou MATH 140. Pas de code? Tape la matière : Calcul, Chimie organique, Python."],
+    ["See who already took it", "Vois qui l’a déjà suivi", "Tutors who took that exact course at your school show up first, with the reason they match.", "Les tuteurs qui ont suivi ce cours précis à ton école apparaissent en premier, avec la raison du match."],
+    ["Message them, book a session", "Écris-leur, réserve une séance", "Online or at the library, evenings and weekends. Or post a request and let tutors come to you.", "En ligne ou à la bibliothèque, soirs et fins de semaine. Ou publie une demande et laisse les tuteurs venir à toi."]];
+  const tutorSteps = [
+    ["List the courses you passed", "Liste les cours que tu as réussis", "Course code, school, and the grade you got.", "Code du cours, école, et ta note."],
+    ["Get approved", "Fais-toi approuver", "We check every tutor before students can see them.", "On vérifie chaque tuteur avant que les élèves puissent le voir."],
+    ["Pick your students", "Choisis tes élèves", "Set your own rate and hours, and answer requests for courses you know.", "Fixe ton tarif et tes heures, et réponds aux demandes pour les cours que tu connais."]];
+  const audiences = [
+    ["CEGEP and university students", "Cégépiens et universitaires", "Midterm next week, a course you might fail, or a whole term of help.", "Intra la semaine prochaine, un cours que tu risques de couler, ou toute une session d’aide.", "#/find", t("Find a tutor", "Trouver un tuteur")],
+    ["High school students and parents", "Élèves du secondaire et parents", "Parents can compare tutors before anyone meets their child, and post requests for them.", "Les parents peuvent comparer les tuteurs avant qu’ils rencontrent leur enfant, et publier des demandes en son nom.", null, t("Create a parent account", "Créer un compte parent"), "parent"],
+    ["Anyone learning something new", "Quiconque apprend quelque chose", "Languages, coding, Excel, music. You don’t need to be in school.", "Langues, programmation, Excel, musique. Pas besoin d’être aux études.", "#/find", t("Find a tutor", "Trouver un tuteur")]];
+  const faq = [
+    ["Is " + B + " free?", B + " est-il gratuit?", "Creating an account and browsing are free. Tutors set their own rates.", "Créer un compte et parcourir sont gratuits. Les tuteurs fixent leurs propres tarifs."],
+    ["Can I get free help instead?", "Puis-je obtenir de l’aide gratuite?", "Yes. Your school’s help centre and the library are a good place to start. " + B + " is for when you want someone who took your exact course, at a time that suits you.", "Oui. Le centre d’aide de ton école et la bibliothèque sont un bon point de départ. " + B + " sert quand tu veux quelqu’un qui a suivi ton cours, à l’heure qui te convient."],
+    ["How do I know a tutor is any good?", "Comment savoir si un tuteur est bon?", "Every tutor is approved before they appear. Courses, grades and schools are self-reported and labelled that way. A “Verified” badge appears only after we check an official document.", "Chaque tuteur est approuvé avant d’apparaître. Les cours, notes et écoles sont déclarés et indiqués comme tels. Le badge « Vérifié » n’apparaît qu’après la vérification d’un document officiel."],
+    ["Can students under 18 use " + B + "?", "Les moins de 18 ans peuvent-ils utiliser " + B + "?", "Students 14 and older can create an account. Under 14, a parent or guardian creates it. Requests from students under 18 are never shown to tutors; a parent can post one for them instead. All tutors are adults.", "Les élèves de 14 ans et plus peuvent créer un compte. Avant 14 ans, un parent ou tuteur légal le crée. Les demandes des moins de 18 ans ne sont jamais montrées aux tuteurs; un parent peut en publier une à leur place. Tous les tuteurs sont majeurs."],
+    ["Is it safe to meet a tutor?", "Est-ce sécuritaire de rencontrer un tuteur?", "Choose online, or meet in a public place like a library, and keep your messages inside " + B + ".", "Choisis l’en ligne ou un lieu public comme une bibliothèque, et garde tes messages dans " + B + "."]];
+  const steps = list => h("ol", { class: "nsteps" }, ...list.map(([a, b, c, d]) =>
+    h("li", {}, h("b", {}, t(a, b)), h("p", {}, t(c, d)))));
 
   V.replaceChildren(
-    h("div", { class: "hero solo", id: "hero" }, h("div", {},
-      h("span", { class: "pill" }, t("Tutoring in Montreal, in English and French", "Tutorat à Montréal, en français et en anglais")),
-      h("h1", {}, ...(lang === "fr" ? ["Trouve le bon tuteur pour ", h("em", {}, "n’importe quelle matière"), "."] : ["Find the right tutor for ", h("em", {}, "any subject"), "."])),
-      h("p", { class: "lead" }, t("Search tutors by subject, school, budget and schedule. And if you tutor, find students who need exactly what you know.", "Cherche des tuteurs par matière, école, budget et horaire. Et si tu donnes des cours, trouve des élèves qui ont besoin exactement de ce que tu sais.")),
-      homeSearch(),
-      h("div", { class: "row", style: "justify-content:center;margin-top:16px" },
-        h("a", { class: "btn", href: "#/find" }, t("Find a tutor", "Trouver un tuteur")),
-        h("button", { class: "btn g", onclick: join("tutor") }, t("Become a tutor", "Devenir tuteur"))))),
-    h("div", { class: "strip rv" }, ...[["Any subject or skill", "Toute matière ou compétence"], ["Tutors set their own rate", "Les tuteurs fixent leur tarif"], ["English and French", "Anglais et français"], ["Every tutor approved by Cram", "Chaque tuteur approuvé par Cram"]].map(([a, b]) =>
-      h("div", {}, h("span", { style: "color:var(--ok);font-weight:700" }, "✓ "), t(a, b)))),
-    h("section", {}, ...heading("How Cram works", "Comment fonctionne Cram", "One site for both sides: students find tutors, and tutors find students.", "Un seul site pour les deux côtés : les élèves trouvent des tuteurs, et les tuteurs trouvent des élèves."),
-      h("div", { class: "g2 home-two" },
-        h("div", { class: "c rv" }, h("h3", {}, t("For students", "Pour les élèves")), steps(studentSteps)),
-        h("div", { class: "c rv" }, h("h3", {}, t("For tutors", "Pour les tuteurs")), steps(tutorSteps)))),
-    h("section", {}, ...heading("Made for everyone who learns", "Pour tous ceux qui apprennent", "", ""),
-      h("div", { class: "aud" }, ...audiences.map(([a, b, c, d, href, label, role], i) =>
-        h("div", { class: "c h rv", style: "--d:" + i * 0.08 + "s;display:flex;flex-direction:column;gap:8px" },
-          h("h3", {}, t(a, b)), h("p", { class: "mu", style: "margin:0;flex:1" }, t(c, d)),
+    // 1. Hero: the promise on the left, a worked example of a match on the right
+    h("div", { class: "hero", id: "hero" },
+      h("div", {},
+        h("p", { class: "kicker" }, t("Montreal · CEGEP, university and high school · EN / FR", "Montréal · cégep, université et secondaire · FR / EN")),
+        h("h1", {}, ...(lang === "fr"
+          ? ["Fais-toi aider par quelqu’un qui a ", mark("déjà réussi ton cours"), "."]
+          : ["Get help from someone who ", mark("already passed your course"), "."])),
+        h("p", { class: "lead" }, t("Search by course code. Tutors who took that exact course at your school come up first, so they know how it’s taught and where everyone gets stuck.",
+          "Cherche par code de cours. Les tuteurs qui ont suivi ce cours précis à ton école apparaissent en premier : ils savent comment il est enseigné et où tout le monde bloque.")),
+        homeSearch(),
+        h("div", { class: "row", style: "margin-top:14px" },
+          h("a", { class: "btn", href: "#/find" }, t("Find a tutor", "Trouver un tuteur")),
+          h("button", { class: "btn g", onclick: join("tutor") }, t("I want to tutor", "Je veux donner des cours")))),
+      h("div", { class: "slip", "aria-label": t("Example of how matching works", "Exemple de fonctionnement du jumelage") },
+        h("p", { class: "slip-h" }, t("How a match works (example)", "Comment marche un match (exemple)")),
+        h("div", { class: "slip-row" }, h("small", {}, t("You search", "Tu cherches")), code("201-NYA-05"), h("span", { class: "mu" }, t("Calculus I · Vanier College", "Calcul I · Collège Vanier"))),
+        h("div", { class: "slip-row" }, h("small", {}, t(B + " shows first", B + " montre d’abord")), h("span", {}, t("Tutors who took ", "Les tuteurs qui ont suivi "), code("201-NYA-05"), t(" at Vanier", " à Vanier"))),
+        h("div", { class: "slip-row" }, h("small", {}, t("And tells you why", "Et te dit pourquoi")), h("span", { class: "why" }, t("Took 201-NYA-05 at Vanier College (A, self-reported)", "A suivi 201-NYA-05 à Collège Vanier (A, déclaré)"))))),
+
+    // 2. Students: three plain steps, no cards
+    h("section", {},
+      h("h2", {}, t("For students", "Pour les élèves")),
+      steps(studentSteps)),
+
+    // 3. Tutors: the brand-coloured band
+    h("section", { class: "band" },
+      h("div", {},
+        h("h2", {}, t("Got an A in a course? Someone in it right now needs you.", "Tu as eu un A dans un cours? Quelqu’un le suit en ce moment et a besoin de toi.")),
+        h("p", { class: "sub" }, t("Tutor the courses you already passed, at your own rate and hours. Most of the prep is done: you’ve sat the exams.", "Donne des cours dans les matières que tu as déjà réussies, à ton tarif et selon tes heures. Le plus gros de la préparation est fait : tu as déjà passé les examens.")),
+        h("button", { class: "btn", onclick: join("tutor") }, t("Create a tutor account", "Créer un compte tuteur"))),
+      steps(tutorSteps)),
+
+    // 4. Who it's for: a simple ruled list
+    h("section", {},
+      h("h2", {}, t("Who it’s for", "Pour qui")),
+      h("div", { class: "rules" }, ...audiences.map(([a, b, c, d, href, label, role]) =>
+        h("div", { class: "rule" },
+          h("h3", {}, t(a, b)), h("p", { class: "mu" }, t(c, d)),
           href ? h("a", { class: "btn g sm", href }, label) : h("button", { class: "btn g sm", onclick: join(role) }, label))))),
-    h("section", {}, ...heading("Free help or Cram?", "Aide gratuite ou Cram?", "Both have a place. Here is the honest difference.", "Les deux ont leur place. Voici la différence, en toute honnêteté."),
-      h("div", { class: "g2" },
-        h("div", { class: "c rv" }, h("h3", {}, t("School and library help", "Aide de l’école et de la bibliothèque")),
-          h("ul", { class: "mu", style: "padding-left:18px;margin:8px 0 0" }, h("li", {}, t("Free", "Gratuite")), h("li", {}, t("Good for quiet space and quick questions", "Idéale pour un lieu calme et des questions rapides")), h("li", {}, t("Hours and availability can be limited", "Les heures et disponibilités peuvent être limitées")))),
-        h("div", { class: "c rv", style: "border-color:var(--ac)" }, h("h3", {}, "Cram"),
-          h("ul", { class: "mu", style: "padding-left:18px;margin:8px 0 0" }, h("li", {}, t("Tutors set their own rate", "Les tuteurs fixent leur tarif")), h("li", {}, t("Someone who knows your exact course or skill", "Quelqu’un qui connaît ton cours ou ta compétence")), h("li", {}, t("Evenings, weekends and a regular weekly slot", "Soirs, fins de semaine et une plage hebdomadaire régulière")))))),
-    h("section", {}, h("h2", { class: "rv" }, t("Common questions", "Questions fréquentes")),
-      h("div", { class: "tc rv", style: "margin-top:14px" }, ...faq.map(([q, qf, a, af]) => h("details", { class: "c" }, h("summary", {}, t(q, qf)), h("p", {}, t(a, af)))))),
-    h("section", {}, h("div", { class: "c rv cta-band", style: "padding:28px" },
-      h("h2", {}, t("Know a subject well? Tutor it.", "Tu maîtrises une matière? Enseigne-la.")),
-      h("p", { class: "sub", style: "margin-bottom:14px" }, t("Create your profile, set your rate, and find students who need help. Every tutor is reviewed by Cram before appearing.", "Crée ton profil, fixe ton tarif et trouve des élèves qui ont besoin d’aide. Chaque tuteur est vérifié par Cram avant d’apparaître.")),
-      h("button", { class: "btn", onclick: join("tutor") }, t("Create a tutor account", "Créer un compte tuteur")))));
+
+    // 5. Honest comparison with free help
+    h("section", {},
+      h("h2", {}, t("Free help or " + B + "?", "Aide gratuite ou " + B + "?")),
+      h("p", { class: "sub" }, t("Both have a place. Here’s the honest difference.", "Les deux ont leur place. Voici la différence, honnêtement.")),
+      h("div", { class: "vs" },
+        h("div", {}, h("h3", {}, t("Your school’s help centre", "Le centre d’aide de ton école")),
+          h("ul", {}, h("li", {}, t("Free", "Gratuit")), h("li", {}, t("Good for quick questions", "Bien pour les questions rapides")), h("li", {}, t("Limited hours, often full before exams", "Heures limitées, souvent plein avant les examens")))),
+        h("div", { class: "us" }, h("h3", {}, B),
+          h("ul", {}, h("li", {}, t("Tutors set their own rate", "Les tuteurs fixent leur tarif")), h("li", {}, t("Someone who took your exact course", "Quelqu’un qui a suivi ton cours")), h("li", {}, t("Evenings, weekends, a regular weekly slot", "Soirs, fins de semaine, une plage fixe chaque semaine")))))),
+
+    // 6. Questions
+    h("section", {},
+      h("h2", {}, t("Questions", "Questions")),
+      h("div", { class: "faq" }, ...faq.map(([q, qf, a, af]) => h("details", {}, h("summary", {}, t(q, qf)), h("p", {}, t(a, af)))))));
 }
 
 // Home search box: sends you to Find tutors with what you typed
 function homeSearch() {
-  const inp = h("input", { type: "text", placeholder: t("What do you need help with? e.g. Calculus, Excel, piano", "Tu as besoin d’aide en quoi? ex. Calcul, Excel, piano"),
+  const inp = h("input", { type: "text", placeholder: t("Course code or subject, e.g. 201-NYA-05, MATH 140, Chemistry", "Code de cours ou matière, ex. 201-NYA-05, MATH 140, Chimie"),
     "aria-label": t("Search tutors", "Chercher un tuteur"), onkeydown: e => { if (e.key === "Enter" && inp.value.trim()) go("#/find/" + encodeURIComponent(inp.value.trim())); } });
   return h("div", { class: "sbox" }, inp);
 }

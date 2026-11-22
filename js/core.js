@@ -12,6 +12,11 @@ const SB = window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY
 const FROM_EMAIL_LINK = new URLSearchParams(location.search).has("code");
 const LINK_ERROR = /error/.test(location.search) || /^#error/.test(location.hash); // e.g. an expired confirmation link
 
+/* ===== Brand name =====
+   The site's name lives here so it can change in one place. (Not settled yet: "Cram" is a working name.)
+   Older pages still spell it out; when the final name is picked, also search the js folder for "Cram". */
+const BRAND = "Cram";
+
 /* ===== Language: t("English", "Français") picks the right one ===== */
 let lang = "en";
 try { lang = localStorage.getItem("cram_lang") || ((navigator.language || "").toLowerCase().startsWith("fr") ? "fr" : "en"); } catch (_) {}
@@ -98,10 +103,11 @@ function renderChrome() {
   $("#nav").replaceChildren(...navItems().map(([key, label]) =>
     h("a", { href: "#/" + key, class: r === key ? "on" : "", "aria-current": r === key ? "page" : null }, label)));
   $("#foot").replaceChildren(
-    t("© Cram · An independent student project, not affiliated with any school. ", "© Cram · Un projet étudiant indépendant, non affilié à une école. "),
+    t("© " + BRAND + " · An independent student project from Montreal, not affiliated with any school. ", "© " + BRAND + " · Un projet étudiant indépendant de Montréal, non affilié à une école. "),
     h("a", { href: "#/status" }, t("What’s real so far", "Ce qui est réel pour l’instant")), " · ",
     h("a", { href: "#/privacy" }, t("Privacy", "Confidentialité")), " · ",
     h("a", { href: "#/terms" }, t("Terms", "Conditions")));
+  $("#logo").textContent = BRAND;
   $("#skip").textContent = t("Skip to main content", "Passer au contenu principal");
   acct();
 }
@@ -121,7 +127,7 @@ function route(focus) {
   const token = ++routeToken;
   if (!$("#modal").hidden) modal.close();
   renderChrome();
-  document.title = (PAGE_TITLES[r] ? PAGE_TITLES[r]() : "Cram") + " · Cram";
+  document.title = (PAGE_TITLES[r] ? PAGE_TITLES[r]() : BRAND) + " · " + BRAND;
   const failed = e => { console.error(e); if (token === routeToken) showProblem(); };
   try {
     if (NEED_LOGIN.has(r) && !AUTH_READY) V.replaceChildren(loadingView());
@@ -175,10 +181,6 @@ function start() {
     e.preventDefault();
     go(a.getAttribute("href"));
   });
-  addEventListener("scroll", () => { // gentle fade of the home hero while scrolling
-    const el = document.getElementById("hero");
-    if (el) el.style.setProperty("--p", Math.min(1, Math.max(0, scrollY / (el.offsetHeight * 0.8))));
-  }, { passive: true });
   route();
   // Safety net: if we still don't know who is logged in after 8 seconds, stop waiting and show the page anyway
   setTimeout(() => { if (!AUTH_READY) { AUTH_READY = true; refreshForUser(); } }, 8000);

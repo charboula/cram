@@ -13,8 +13,8 @@ const FROM_EMAIL_LINK = new URLSearchParams(location.search).has("code");
 const LINK_ERROR = /error/.test(location.search) || /^#error/.test(location.hash); // e.g. an expired confirmation link
 
 /* ===== Brand name =====
-   The site's name lives here so it can change in one place. (Not settled yet: "Cram" is a working name.)
-   Older pages still spell it out; when the final name is picked, also search the js folder for "Cram". */
+   The site's name lives here, and every page reads it. To rename the site, change this one line.
+   ("Cram" is a working name.) Also update the <title> line in index.html, which shows for a split second while loading. */
 const BRAND = "Cram";
 
 /* ===== Language: t("English", "Français") picks the right one ===== */
@@ -117,7 +117,7 @@ const loadingView = text => h("section", { class: "loading" }, h("p", { class: "
 function showProblem() {
   V.replaceChildren(h("section", {}, h("div", { class: "c" },
     h("h3", {}, t("This page didn’t load", "Cette page ne s’est pas chargée")),
-    h("p", { class: "mu" }, t("Check your internet connection and refresh. If it keeps happening, Cram’s database may be missing its latest update.", "Vérifie ta connexion Internet et actualise. Si ça continue, la base de données de Cram n’a peut-être pas sa dernière mise à jour.")),
+    h("p", { class: "mu" }, t(`Check your internet connection and refresh. If it keeps happening, ${BRAND}’s database may be missing its latest update.`, `Vérifie ta connexion Internet et actualise. Si ça continue, la base de données de ${BRAND} n’a peut-être pas sa dernière mise à jour.`)),
     h("button", { class: "btn sm", onclick: () => location.reload() }, t("Refresh", "Actualiser")))));
 }
 let routeToken = 0;
@@ -184,6 +184,29 @@ function start() {
   route();
   // Safety net: if we still don't know who is logged in after 8 seconds, stop waiting and show the page anyway
   setTimeout(() => { if (!AUTH_READY) { AUTH_READY = true; refreshForUser(); } }, 8000);
+}
+
+/* ===== Date picker: Day / Month / Year dropdowns (clearer than the browser's own date box, and the same on every phone) =====
+   datePicker("Date of birth") returns an element; el.getValue() gives "2005-03-14", or "" if it isn't complete and real.
+   el.partly() is true when only some of the three are chosen. */
+function datePicker(label, opts = {}) {
+  const now = new Date().getFullYear();
+  const from = opts.fromYear || now - 100, to = opts.toYear || now;
+  const monthName = m => new Date(2000, m, 1).toLocaleString(lang === "fr" ? "fr-CA" : "en-CA", { month: "long" });
+  const pick = (name, first, items) => h("select", { "aria-label": label + " : " + name }, h("option", { value: "" }, first), ...items);
+  const day = pick(t("day", "jour"), t("Day", "Jour"), Array.from({ length: 31 }, (_, i) => h("option", { value: i + 1 }, String(i + 1))));
+  const month = pick(t("month", "mois"), t("Month", "Mois"), Array.from({ length: 12 }, (_, i) => h("option", { value: i + 1 }, monthName(i))));
+  const year = pick(t("year", "année"), t("Year", "Année"), Array.from({ length: to - from + 1 }, (_, i) => h("option", { value: to - i }, String(to - i))));
+  const el = h("div", { class: "datepick", role: "group", "aria-label": label }, ...(lang === "fr" ? [day, month, year] : [month, day, year]));
+  const pad = n => String(n).padStart(2, "0");
+  el.getValue = () => {
+    if (!day.value || !month.value || !year.value) return "";
+    const d = new Date(Number(year.value), Number(month.value) - 1, Number(day.value));
+    if (d.getMonth() !== Number(month.value) - 1) return ""; // e.g. February 30 doesn't exist
+    return year.value + "-" + pad(month.value) + "-" + pad(day.value);
+  };
+  el.partly = () => [day, month, year].some(x => x.value) && !el.getValue();
+  return el;
 }
 
 // Rejects if something takes longer than ms (so a button never spins forever)

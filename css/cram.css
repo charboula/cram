@@ -139,3 +139,21 @@ mark{background:linear-gradient(transparent 55%,var(--hl) 55%,var(--hl) 92%,tran
 .star{border:0;background:none;font-size:30px;line-height:1;color:var(--ln);cursor:pointer;padding:2px}.star.on{color:var(--ac)}
 /* Small text-style button (Report) */
 .linkbtn{border:0;background:none;color:var(--mu);font-size:14px;cursor:pointer;padding:4px 0;text-decoration:underline}.linkbtn:hover{color:var(--ac)}
+/* ===== Signed-in pages ===== */
+/* Menu: the current page gets the yellow highlighter underline instead of a pink box */
+nav a:hover{background:none;color:var(--ink)}nav a.on{background:none;color:var(--ink);font-weight:700;box-shadow:inset 0 -4px 0 var(--hl);border-radius:0}
+/* Chips and tags: squarer, less "app-like" */
+.chip{border-radius:8px;border-color:var(--ln)}.chip:hover{border-color:var(--ac)}.tag{border-radius:4px}
+.seg{border-radius:10px}.seg button{border-radius:7px}
+/* Forms read better at a comfortable width */
+.narrow{max-width:820px}
+/* Course suggestions under a search box */
+.acwrap{position:relative}.sbox.wide{max-width:none;margin:0}
+.sres button{padding:9px 14px}.sres button b{font-weight:700}.sres .acmeta{display:block;margin-top:2px;color:var(--mu)}.sres .acmeta .code{font-size:12px}
+.sres button:focus{background:var(--ac2);outline:none}
+/* Date picker: month, day, year side by side */
+.datepick{display:grid;grid-template-columns:1.4fr .8fr 1fr;gap:8px;max-width:420px}
+:lang(fr) .datepick{grid-template-columns:.8fr 1.4fr 1fr}
+/* One Save button for the whole profile: stays visible at the bottom of the screen while you scroll the form */
+.savebar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--s);border:1px solid var(--ln);border-left:6px solid var(--hl);border-radius:var(--r);padding:12px 16px;box-shadow:0 6px 18px rgba(31,27,23,.08)}
+@media (max-width:760px){.savebar{bottom:calc(72px + env(safe-area-inset-bottom,0px))}}

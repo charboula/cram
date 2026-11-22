@@ -13,7 +13,7 @@ function ageProblem(dateStr, joinAs) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) return t("Please enter your date of birth.", "Entre ta date de naissance.");
   const a = ageFrom(dateStr);
   if (a < 0 || a > 120) return t("Please enter a real date of birth.", "Entre une vraie date de naissance.");
-  if (a < 14) return t("Cram accounts are for people 14 and older. A parent or guardian can create an account for you.", "Les comptes Cram sont pour les 14 ans et plus. Un parent ou tuteur légal peut créer un compte pour toi.");
+  if (a < 14) return t(`${BRAND} accounts are for people 14 and older. A parent or guardian can create an account for you.`, `Les comptes ${BRAND} sont pour les 14 ans et plus. Un parent ou tuteur légal peut créer un compte pour toi.`);
   if (joinAs === "tutor" && a < 18) return t("Tutors must be 18 or older. You can join as a student.", "Les tuteurs doivent avoir 18 ans ou plus. Tu peux t’inscrire comme élève.");
   if (joinAs === "parent" && a < 18) return t("Parent and guardian accounts are for adults (18+).", "Les comptes parent ou tuteur légal sont pour les adultes (18 ans et plus).");
   return "";
@@ -62,13 +62,13 @@ function authModal(mode, joinAs) {
       f.joinAs = r;
       [...roles.children].forEach(b => { b.classList.toggle("on", b === e.currentTarget); b.setAttribute("aria-pressed", String(b === e.currentTarget)); });
     } }, l)));
-  const dob = h("input", { type: "date", "aria-label": t("Date of birth", "Date de naissance"), max: new Date().toISOString().slice(0, 10) });
+  const dob = datePicker(t("Your date of birth", "Ta date de naissance"));
   const pw = h("input", { type: "password", "aria-label": t("Password", "Mot de passe"), autocomplete: mode === "login" ? "current-password" : "new-password" });
 
   const submit = async () => {
     const email = f.email.trim().toLowerCase();
     if (mode === "signup" && f.name.trim().length < 2) { er.textContent = t("Please enter your name.", "Entre ton nom."); return; }
-    if (mode === "signup") { const p = ageProblem(dob.value, f.joinAs); if (p) { er.textContent = p; return; } }
+    if (mode === "signup") { const p = ageProblem(dob.getValue(), f.joinAs); if (p) { er.textContent = p; return; } }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { er.textContent = t("Please enter a valid email address.", "Entre une adresse courriel valide."); return; }
     if (pw.value.length < 8) { er.textContent = t("Password must be at least 8 characters.", "Le mot de passe doit contenir au moins 8 caractères."); return; }
     if (!SB) { er.textContent = t("Can’t reach the account service. Refresh the page and try again.", "Impossible de joindre le service de comptes. Actualise la page et réessaie."); return; }
@@ -81,7 +81,7 @@ function authModal(mode, joinAs) {
           role: f.joinAs === "tutor" ? "tutor" : "student",
           account_kind: f.joinAs === "parent" ? "parent" : "self",
           display_name: f.name.trim(),
-          birth_date: dob.value };
+          birth_date: dob.getValue() };
         const { data, error } = await withTimeout(SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname } }), 20000);
         if (error) throw error;
         if (data.user && data.user.identities && data.user.identities.length === 0) { er.textContent = t("That email already has an account. Try logging in.", "Ce courriel a déjà un compte. Essaie de te connecter."); return; }
@@ -108,7 +108,7 @@ function authModal(mode, joinAs) {
     } finally { btn.disabled = false; }
   };
   const btn = h("button", { class: "btn", style: "width:100%", onclick: submit }, mode === "signup" ? t("Create account", "Créer le compte") : t("Log in", "Se connecter"));
-  modal(h("h3", { style: "margin-bottom:10px" }, "Cram"), tabs,
+  modal(h("h3", { style: "margin-bottom:10px" }, `${BRAND}`), tabs,
     mode === "signup" ? [
       h("label", { class: "f" }, t("I’m joining because", "Je m’inscris parce que")), roles,
       ...field(t("Your name", "Ton nom"), "name", "text", "name"),

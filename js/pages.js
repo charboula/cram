@@ -86,18 +86,18 @@ function home() {
       h("div", { class: "faq" }, ...faq.map(([q, qf, a, af]) => h("details", {}, h("summary", {}, t(q, qf)), h("p", {}, t(a, af)))))));
 }
 
-// Home search box: sends you to Find tutors with what you typed
+// Home search box: suggests courses while you type, then sends you to Find tutors
 function homeSearch() {
   const inp = h("input", { type: "text", placeholder: t("Course code or subject, e.g. 201-NYA-05, MATH 140, Chemistry", "Code de cours ou matière, ex. 201-NYA-05, MATH 140, Chimie"),
     "aria-label": t("Search tutors", "Chercher un tuteur"), onkeydown: e => { if (e.key === "Enter" && inp.value.trim()) go("#/find/" + encodeURIComponent(inp.value.trim())); } });
-  return h("div", { class: "sbox" }, inp);
+  return courseBox(inp, c => go("#/find/" + encodeURIComponent(courseQuery(c))), "sbox");
 }
 
 /* ===== Dashboard (one page; what it shows depends on student or tutor mode) ===== */
 function dashboard() {
   const cards = [];
   if (!ME.dbReady) cards.push(h("div", { class: "c" }, h("h3", {}, t("Some account features aren’t switched on yet", "Certaines fonctions du compte ne sont pas encore activées")),
-    h("p", { class: "mu" }, t("Cram’s database needs its latest update. Please try again later.", "La base de données de Cram doit être mise à jour. Réessaie plus tard.")),
+    h("p", { class: "mu" }, t(`${BRAND}’s database needs its latest update. Please try again later.`, `La base de données de ${BRAND} doit être mise à jour. Réessaie plus tard.`)),
     ME.dbError ? h("p", { class: "mu", style: "font-size:12px" }, t("Technical detail: ", "Détail technique : ") + ME.dbError) : null));
   else if (!ME.birthDate) cards.push(birthDateCard());
   if (ME.dbReady) cards.push(sessionsCard());
@@ -112,21 +112,12 @@ function dashboard() {
     h("div", { class: "g2", style: "margin-top:20px" }, ...cards)));
 }
 
+// Missing date of birth: send them to My profile, where it's saved with everything else in one go
 function birthDateCard() {
-  const inp = h("input", { type: "date", "aria-label": t("Date of birth", "Date de naissance"), max: new Date().toISOString().slice(0, 10) });
-  const er = h("p", { class: "err", role: "alert" });
-  const save = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(inp.value)) { er.textContent = t("Please enter your date of birth.", "Entre ta date de naissance."); return; }
-    const { error } = await SB.rpc("set_birth_date", { d: inp.value });
-    if (error) { er.textContent = error.message; return; }
-    ME.birthDate = inp.value;
-    toast(t("Saved", "Enregistré"));
-    dashboard();
-  };
   return h("div", { class: "c", style: "border-color:var(--wa)" },
     h("h3", {}, t("Add your date of birth", "Ajoute ta date de naissance")),
-    h("p", { class: "mu" }, t("Cram has safety rules for minors, so we need it once. It stays private and can’t be changed later.", "Cram a des règles de sécurité pour les mineurs, alors on en a besoin une fois. Elle reste privée et ne peut pas être modifiée ensuite.")),
-    inp, er, h("button", { class: "btn sm", style: "margin-top:10px", onclick: save }, t("Save", "Enregistrer")));
+    h("p", { class: "mu" }, t(`${BRAND} has safety rules for minors, so we need it once. It stays private and can’t be changed later.`, `${BRAND} a des règles de sécurité pour les mineurs, alors on en a besoin une fois. Elle reste privée et ne peut pas être modifiée ensuite.`)),
+    h("a", { class: "btn sm", href: "#/profile" }, t("Finish my profile", "Compléter mon profil")));
 }
 
 function studentCards() {
@@ -163,8 +154,8 @@ function tutorCards() {
       h("a", { class: "btn sm", href: "#/students" }, t("Find students", "Trouver des élèves"))),
     h("div", { class: "c" }, h("h3", {}, t("Your status", "Ton statut")),
       h("div", { class: "row", style: "margin:8px 0" }, tp.approved
-        ? h("span", { class: "tag ok" }, "✓ " + t("Approved by Cram", "Approuvé par Cram"))
-        : h("span", { class: "tag wa" }, t("Waiting for Cram’s approval", "En attente d’approbation par Cram"))),
+        ? h("span", { class: "tag ok" }, "✓ " + t(`Approved by ${BRAND}`, `Approuvé par ${BRAND}`))
+        : h("span", { class: "tag wa" }, t(`Waiting for ${BRAND}’s approval`, `En attente d’approbation par ${BRAND}`))),
       h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap;margin-top:8px" }, listed, t("Show my profile in search", "Montrer mon profil dans la recherche")),
       h("p", { class: "mu", style: "margin:8px 0 0" }, t("Students see you only when you are approved and this is on.", "Les élèves te voient seulement si tu es approuvé et que ceci est activé."))),
     h("div", { class: "c" }, h("h3", {}, t("Your profile", "Ton profil")),
@@ -202,14 +193,14 @@ function status() {
   const li = (en, fr) => h("li", { style: "margin:6px 0" }, t(en, fr));
   V.replaceChildren(h("section", {},
     h("h2", {}, t("What’s real so far", "Ce qui est réel pour l’instant")),
-    h("p", { class: "sub" }, t("Cram is being built in steps. Here is exactly what is real today.", "Cram se construit par étapes. Voici exactement ce qui est réel aujourd’hui.")),
+    h("p", { class: "sub" }, t(`${BRAND} is being built in steps. Here is exactly what is real today.`, `${BRAND} se construit par étapes. Voici exactement ce qui est réel aujourd’hui.`)),
     h("div", { class: "g2" },
       h("div", { class: "c" },
-        h("h3", { style: "color:var(--ok)" }, "✓ " + t("Real (saved in Cram’s database)", "Réel (enregistré dans la base de données de Cram)")),
+        h("h3", { style: "color:var(--ok)" }, "✓ " + t(`Real (saved in ${BRAND}’s database)`, `Réel (enregistré dans la base de données de ${BRAND})`)),
         h("ul", { style: "padding-left:18px" },
           li("Accounts: sign up, email confirmation, log in", "Comptes : inscription, confirmation par courriel, connexion"),
           li("Student and tutor roles on one account, with a switch", "Rôles étudiant et tuteur sur un seul compte, avec une bascule"),
-          li("Tutor approval by Cram and the “show me in search” setting", "Approbation des tuteurs par Cram et le réglage « me montrer dans la recherche »"),
+          li(`Tutor approval by ${BRAND} and the “show me in search” setting`, `Approbation des tuteurs par ${BRAND} et le réglage « me montrer dans la recherche »`),
           li("Age rules for minors", "Règles d’âge pour les mineurs"),
           li("Profiles: languages, level, school search, tutor subjects, schools, rate and availability", "Profils : langues, niveau, recherche d’école, matières, écoles, tarif et disponibilités du tuteur"),
           li("Tutor search, filters, comparison and tutor profiles", "Recherche de tuteurs, filtres, comparaison et profils"),
@@ -220,7 +211,7 @@ function status() {
       h("div", { class: "c" },
         h("h3", { style: "color:var(--wa)" }, "… " + t("Coming next", "À venir")),
         h("ul", { style: "padding-left:18px" },
-          li("Payments through Cram", "Paiements par Cram"),
+          li(`Payments through ${BRAND}`, `Paiements par ${BRAND}`),
           li("Verified grades and profile photos for tutors", "Notes vérifiées et photos de profil pour les tuteurs"),
           li("Final privacy policy and terms, reviewed by a lawyer", "Politique de confidentialité et conditions finales, révisées par un avocat"))))));
 }

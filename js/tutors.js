@@ -30,7 +30,7 @@ async function loadTutors() {
 /* ===== Matching: every reason comes from real profile facts, never made up ===== */
 function matchTutor(x, F) {
   const reasons = [];
-  let score = 0;
+  let score = 0, exact = null;
   const subs = x.tutor_subjects || [];
   const q = F.q.trim().toLowerCase(), squash = s => s.toLowerCase().replace(/[\s-]/g, "");
   if (q) {
@@ -40,7 +40,7 @@ function matchTutor(x, F) {
     const sameSubject = course && course.subject ? subs.filter(s => s.subjects && s.subjects.name_en === course.subject) : [];
     if (sameSubject.length) { score += 1; reasons.push(t("Teaches ", "Enseigne ") + subjectName(sameSubject[0].subjects) + t(" (not this exact course)", " (pas ce cours précis)")); }
     else if (!hits.length && !(x.headline || "").toLowerCase().includes(q)) return null;
-    const exact = hits.find(s => s.course_code && squash(s.course_code) === squash(q));
+    exact = hits.find(s => s.course_code && squash(s.course_code) === squash(q));
     if (exact) {
       score += 3;
       reasons.push(t("Took ", "A suivi ") + exact.course_code + (exact.institutions ? t(" at ", " à ") + schoolName(exact.institutions) : "") +
@@ -64,7 +64,7 @@ function matchTutor(x, F) {
     const at = (x.tutor_institutions || []).find(i => i.institutions && i.institutions.id === F.school.id) || subs.find(s => s.institutions && s.institutions.id === F.school.id);
     if (at) { score += 2; reasons.push(t("Same school: ", "Même école : ") + schoolName(F.school)); }
   }
-  return { score, reasons };
+  return { score, reasons, exact: !!exact };
 }
 
 /* ===== Find tutors page ===== */
@@ -109,14 +109,15 @@ async function findPage(arg) {
     if (!tutors.length) {
       out.append(h("div", { class: "c" }, h("h3", {}, t("No tutors yet", "Aucun tuteur pour l’instant")),
         h("p", { class: "mu" }, t(`${BRAND} is just starting. Tutors appear here once they finish their profile and ${BRAND} approves them.`, `${BRAND} commence tout juste. Les tuteurs apparaissent ici une fois leur profil terminé et approuvé par ${BRAND}.`)),
-        h("button", { class: "btn sm g", onclick: () => (ME ? go("#/dashboard") : authModal("signup", "tutor")) }, t("Become a tutor", "Devenir tuteur"))));
+        h("button", { class: "btn sm g", onclick: () => (ME ? go("#/dashboard") : authModal("signup", "tutor")) }, t("Become a tutor", "Devenir tuteur"))), requestNudge());
       return;
     }
     const list = tutors.map(x => ({ x, m: matchTutor(x, F) })).filter(r => r.m)
       .sort((a, b) => b.m.score - a.m.score || (rateOf(a.x) || 999) - (rateOf(b.x) || 999));
     out.append(h("h3", { style: "margin:12px 0 4px;grid-column:1/-1" }, list.length + " " + (list.length === 1 ? t("tutor", "tuteur") : t("tutors", "tuteurs"))));
     if (!list.length) out.append(h("div", { class: "c mu" }, t("No tutor matches all of these. Try removing a filter.", "Aucun tuteur ne correspond à tout ça. Essaie de retirer un filtre.")));
-    list.forEach(({ x, m }) => out.append(tutorCard(x, m.reasons, draw)));
+    list.forEach(({ x, m }) => out.append(tutorCard(x, m.reasons, draw, m.exact)));
+    out.append(requestNudge());
   }
 
   V.replaceChildren(h("section", {},
@@ -138,7 +139,18 @@ async function findPage(arg) {
   draw();
 }
 
-function tutorCard(x, reasons, redraw) {
+// Under the results: nobody right? Post a request so tutors come to you (instead of leaving the site empty-handed)
+function requestNudge() {
+  if (ME && ME.mode === "tutor") return "";
+  const q = (findPage.F && findPage.F.q || "").trim();
+  return h("div", { class: "c nudge", style: "grid-column:1/-1" },
+    h("h3", {}, t("Didn’t find the right person?", "Pas trouvé la bonne personne?")),
+    h("p", { class: "mu" }, t("Post a request" + (q ? " for " + q : "") + ". Tutors who took the course can offer to help, and you choose who to talk to. Your name stays hidden until then.",
+      "Publie une demande" + (q ? " pour " + q : "") + ". Les tuteurs qui ont suivi le cours peuvent proposer leur aide, et tu choisis avec qui parler. Ton nom reste caché d’ici là.")),
+    h("button", { class: "btn sm", onclick: () => { newRequestPage.prefill = q; ME ? go("#/requests/new") : authModal("signup", "student"); } }, t("Post a request", "Publier une demande")));
+}
+
+function tutorCard(x, reasons, redraw, exact) {
   const rate = rateOf(x);
   const subs = (x.tutor_subjects || []).map(s => subjectName(s.subjects) + (s.course_code ? " (" + s.course_code + ")" : ""));
   const schools = (x.tutor_institutions || []).map(i => schoolName(i.institutions)).filter(Boolean);
@@ -147,10 +159,12 @@ function tutorCard(x, reasons, redraw) {
     h("div", { class: "row", style: "flex-wrap:nowrap;align-items:flex-start" }, avatar(x),
       h("div", { style: "flex:1;min-width:0" }, h("h3", { style: "font-size:17px" }, tutorName(x)), h("div", { class: "mu" }, x.headline || "")),
       h("div", { style: "text-align:right" }, h("b", { style: "font-size:17px" }, rate ? money(rate) : t("Rate not set", "Tarif non fixé")))),
+    // The reason they match comes right under the name: "Took 201-NYA-05 at Vanier (A)" is what students care about most
+    reasons.length ? h("div", { class: exact ? "why hit" : "why" }, h("b", {}, exact ? "✓ " + t("Took your course: ", "A suivi ton cours : ") : t("Why this match: ", "Pourquoi ce choix : ")),
+      (exact ? reasons.slice(0, 1).map(r => r.replace(/^(Took|A suivi) /, "")) : []).concat(reasons.slice(exact ? 1 : 0)).join(" · ")) : null,
     subs.length ? h("div", { class: "chips" }, ...subs.slice(0, 4).map(s => h("span", { class: "tag" }, s)), subs.length > 4 ? h("span", { class: "mu" }, "+" + (subs.length - 4)) : null) : null,
     h("div", { class: "mu" }, [schools.slice(0, 2).join(", "), [x.offers_online && t("Online", "En ligne"), x.offers_in_person && t("In person", "En personne")].filter(Boolean).join(" / "),
       ((x.profiles && x.profiles.languages) || []).map(l => label(LANGS, l)).join(", ")].filter(Boolean).join(" · ")),
-    reasons.length ? h("div", { class: "why" }, h("b", {}, t("Why this match: ", "Pourquoi ce choix : ")), reasons.join(" · ")) : null,
     h("div", { class: "row sp" },
       h("div", { class: "row" }, h("a", { class: "btn sm", href: "#/tutor/" + x.user_id }, t("View profile", "Voir le profil")), verifyTag(x.verification_status), ratingTag(x.rating)),
       h("label", { class: "row", style: "cursor:pointer;font-size:14px" }, h("input", { type: "checkbox", checked: inCompare, onchange: e => {

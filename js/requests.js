@@ -86,6 +86,10 @@ async function newRequestPage() {
     SB.from("student_profiles").select("level").eq("user_id", ME.id).maybeSingle()]);
   const adult = isAdultOrParent();
   const f = { subject: "", code: "", level: (me && me.level) || "", details: "", budget: "", format: "either", languages: [], availability: [], neededBy: "", school: null, discoverable: !!adult };
+  // Coming from "Post a request" on Find tutors: start with the course they searched for
+  const pre = newRequestPage.prefill || ""; newRequestPage.prefill = "";
+  const preCourse = pre && courseByCode(pre);
+  if (preCourse) { f.code = preCourse.code; const sub = (subjects || []).find(x => x.name_en === preCourse.subject); if (sub) f.subject = String(sub.id); }
   const er = h("p", { class: "err", role: "alert" });
   const cats = [["academic", "School subjects", "Matières scolaires"], ["language", "Languages", "Langues"], ["tech", "Tech and software", "Techno et logiciels"], ["arts", "Music and arts", "Musique et arts"], ["other", "Other", "Autre"]];
   const schoolLine = h("div", {});
@@ -94,7 +98,7 @@ async function newRequestPage() {
     : schoolPicker(s => { f.school = s; drawSchool(); }, t("Add your school (optional)", "Ajoute ton école (facultatif)")));
   drawSchool();
   const subjectSelect = h("select", { onchange: e => { f.subject = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")),
-    ...cats.map(([c, en, fr]) => h("optgroup", { label: t(en, fr) }, ...(subjects || []).filter(s => s.category === c).map(s => h("option", { value: s.id }, subjectName(s))))));
+    ...cats.map(([c, en, fr]) => h("optgroup", { label: t(en, fr) }, ...(subjects || []).filter(s => s.category === c).map(s => h("option", { value: s.id, selected: f.subject === String(s.id) }, subjectName(s))))));
   const send = async () => {
     if (!f.subject) { er.textContent = t("Choose a subject.", "Choisis une matière."); return; }
     if (f.details.trim().length < 10) { er.textContent = t("Say a bit more about what you need (at least 10 characters).", "Décris un peu plus ton besoin (au moins 10 caractères)."); return; }
@@ -114,7 +118,7 @@ async function newRequestPage() {
     h("div", { class: "c", style: "display:grid;gap:14px" },
       field(t("Subject or skill", "Matière ou compétence"), subjectSelect),
       h("div", { class: "g2" },
-        field(t("Course (optional)", "Cours (facultatif)"), courseBox(h("input", { type: "text", maxlength: 30, placeholder: t("Code or name, e.g. 201-NYB-05", "Code ou nom, ex. 201-NYB-05"), oninput: e => { f.code = e.target.value; } }),
+        field(t("Course (optional)", "Cours (facultatif)"), courseBox(h("input", { type: "text", maxlength: 30, value: f.code, placeholder: t("Code or name, e.g. 201-NYB-05", "Code ou nom, ex. 201-NYB-05"), oninput: e => { f.code = e.target.value; } }),
           c => pickCourseInto(c, f, subjectSelect, subjects || []))),
         field(t("Level", "Niveau"), h("select", { onchange: e => { f.level = e.target.value; } }, h("option", { value: "" }, t("Choose…", "Choisis…")), ...LEVELS.map(([v, en, fr]) => h("option", { value: v, selected: f.level === v }, t(en, fr)))))),
       field(t("What do you need help with?", "Sur quoi as-tu besoin d’aide?"), h("textarea", { maxlength: 600, placeholder: t("e.g. Exam on Dec 12, stuck on derivatives and related rates. Would like 2 or 3 sessions.", "ex. Examen le 12 déc., bloqué sur les dérivées. J’aimerais 2 ou 3 séances."), oninput: e => { f.details = e.target.value; } }),

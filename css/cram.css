@@ -167,3 +167,11 @@ nav a:hover{background:none;color:var(--ink)}nav a.on{background:none;color:var(
 .intro-line{font-family:var(--f-mono);font-size:13px;text-transform:uppercase;color:var(--mu);text-align:center;padding:0 16px;opacity:0;animation:fadein .4s .55s forwards}
 @keyframes mark{to{background-size:100% 38%}}
 @keyframes fadein{to{opacity:1}}
+/* Competitor-inspired tweaks: quick course picks on home, exact-course match on tutor cards, tutor "get listed" steps, request nudge */
+.quick{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;font-size:14px}
+.quick .chip{text-decoration:none;font-family:var(--f-mono);font-size:13px;padding:5px 11px}
+.quick .chip:hover{border-color:var(--ac);color:var(--ac)}
+.why.hit{background:color-mix(in srgb,var(--hl) 45%,var(--s));border-left:4px solid var(--ac)}
+.todo{list-style:none;padding:0;margin:10px 0 12px;display:grid;gap:6px}
+.todo li{color:var(--mu)}.todo li.done{color:var(--ok);font-weight:600}
+.nudge{border-style:dashed;margin-top:4px}

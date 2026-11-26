@@ -40,6 +40,12 @@ function home() {
         h("p", { class: "lead" }, t("Search by course code. Tutors who took that exact course at your school come up first, so they know how it’s taught and where everyone gets stuck.",
           "Cherche par code de cours. Les tuteurs qui ont suivi ce cours précis à ton école apparaissent en premier : ils savent comment il est enseigné et où tout le monde bloque.")),
         homeSearch(),
+        // One-tap examples under the search box, so a student sees how it works without typing
+        h("div", { class: "quick" }, h("span", { class: "mu" }, t("Try a Vanier course:", "Essaie un cours de Vanier :")),
+          ...["201-NYA-05", "201-NYB-05", "202-NYA-05", "203-NYA-05", "101-NYA-05"].map(c => {
+            const k = courseByCode(c);
+            return h("a", { class: "chip code", href: "#/find/" + encodeURIComponent(c), title: k ? t(k.en, k.fr) : c }, c);
+          })),
         h("div", { class: "row", style: "margin-top:14px" },
           h("a", { class: "btn", href: "#/find" }, t("Find a tutor", "Trouver un tuteur")),
           h("button", { class: "btn g", onclick: join("tutor") }, t("I want to tutor", "Je veux donner des cours")))),
@@ -137,32 +143,40 @@ function studentCards() {
 
 function tutorCards() {
   const tp = ME.tutor || {};
+  // What a new tutor must finish before students can see them. Courses with grades are the whole point of the site,
+  // so the "show me in search" switch stays off until at least one is added.
+  const steps = h("ul", { class: "todo" }, h("li", { class: "mu" }, t("Checking your profile…", "Vérification de ton profil…")));
+  let ready = false;
   const listed = h("input", { type: "checkbox", checked: !!tp.is_listed, onchange: async e => {
     const want = e.target.checked;
+    if (want && !ready) { e.target.checked = false; toast(t("Finish the steps above first.", "Termine d’abord les étapes ci-dessus.")); return; }
     const { error } = await SB.from("tutor_profiles").update({ is_listed: want }).eq("user_id", ME.id);
     if (error) { e.target.checked = !want; toast(t("Couldn’t save: ", "Impossible d’enregistrer : ") + error.message); return; }
     tp.is_listed = want;
     toast(want ? t("You’ll appear in search once approved", "Tu apparaîtras dans la recherche une fois approuvé") : t("Hidden from search", "Masqué de la recherche"));
   } });
-  const missing = [
-    !tp.headline && t("a headline", "un titre"),
-    !tp.bio && t("a short bio", "une courte bio"),
-    !tp.hourly_rate_cents && t("your hourly rate", "ton tarif horaire")].filter(Boolean);
+  SB.from("tutor_subjects").select("grade").eq("tutor_id", ME.id).then(({ data }) => {
+    const graded = (data || []).filter(s => s.grade).length;
+    const todo = [
+      [!!tp.headline && !!tp.bio, t("A headline and a short bio", "Un titre et une courte bio")],
+      [!!tp.hourly_rate_cents, t("Your hourly rate", "Ton tarif horaire")],
+      [graded > 0, t("At least one course you passed, with your grade", "Au moins un cours réussi, avec ta note")]];
+    ready = todo.every(x => x[0]);
+    steps.replaceChildren(...todo.map(([done, text]) => h("li", { class: done ? "done" : "" }, (done ? "✓ " : "○ ") + text)),
+      h("li", { class: tp.approved ? "done" : "" }, (tp.approved ? "✓ " : "○ ") + t(`Approved by ${BRAND}`, `Approuvé par ${BRAND}`) +
+        (tp.approved ? "" : t(" (we check after you finish the steps above)", " (on vérifie quand tu as fini les étapes ci-dessus)"))));
+    listed.disabled = !ready && !tp.is_listed; // can always switch it off
+  });
   return [
     h("div", { class: "c" }, h("h3", {}, t("Find students", "Trouver des élèves")),
       h("p", { class: "mu" }, t("Browse requests from students who want help, with the best matches for your profile first.", "Parcours les demandes d’élèves qui veulent de l’aide, avec les meilleurs choix pour ton profil en premier.")),
       h("a", { class: "btn sm", href: "#/students" }, t("Find students", "Trouver des élèves"))),
-    h("div", { class: "c" }, h("h3", {}, t("Your status", "Ton statut")),
-      h("div", { class: "row", style: "margin:8px 0" }, tp.approved
-        ? h("span", { class: "tag ok" }, "✓ " + t(`Approved by ${BRAND}`, `Approuvé par ${BRAND}`))
-        : h("span", { class: "tag wa" }, t(`Waiting for ${BRAND}’s approval`, `En attente d’approbation par ${BRAND}`))),
-      h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap;margin-top:8px" }, listed, t("Show my profile in search", "Montrer mon profil dans la recherche")),
-      h("p", { class: "mu", style: "margin:8px 0 0" }, t("Students see you only when you are approved and this is on.", "Les élèves te voient seulement si tu es approuvé et que ceci est activé."))),
-    h("div", { class: "c" }, h("h3", {}, t("Your profile", "Ton profil")),
-      missing.length
-        ? h("p", { class: "mu" }, t("Still missing: ", "Il manque encore : ") + missing.join(", ") + ".")
-        : h("p", { class: "mu" }, t("Your profile has the basics. Add subjects and schools so students can find you.", "Ton profil a l’essentiel. Ajoute des matières et des écoles pour que les élèves te trouvent.")),
-      h("a", { class: "btn sm", href: "#/profile" }, t("Edit my profile", "Modifier mon profil")))];
+    h("div", { class: "c" }, h("h3", {}, t("Get listed", "Apparaître dans la recherche")),
+      h("p", { class: "mu", style: "margin:4px 0 0" }, t("Students find you by the courses you passed, so those come first.", "Les élèves te trouvent par les cours que tu as réussis, alors ça passe en premier.")),
+      steps,
+      h("a", { class: "btn sm g", href: "#/profile" }, t("Edit my profile", "Modifier mon profil")),
+      h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap;margin-top:12px" }, listed, t("Show my profile in search", "Montrer mon profil dans la recherche")),
+      h("p", { class: "mu", style: "margin:8px 0 0" }, t("Students see you only when you are approved and this is on.", "Les élèves te voient seulement si tu es approuvé et que ceci est activé.")))];
 }
 
 function otherRoleCard() {

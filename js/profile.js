@@ -98,9 +98,6 @@ function saveButton(label, action) {
 }
 
 const field = (label, el, hint) => h("div", { style: "display:grid;gap:4px" }, h("label", { class: "f", style: "margin:0" }, label), el, hint ? h("span", { class: "mu", style: "font-size:13px" }, hint) : null);
-const listRow = (main, sub, onRemove) => h("div", { class: "row sp", style: "padding:10px 0;border-top:1px solid var(--ln);flex-wrap:nowrap" },
-  h("div", {}, h("b", {}, main), sub ? h("div", { class: "mu" }, sub) : null),
-  h("button", { class: "btn sm no", onclick: onRemove, "aria-label": t("Remove ", "Retirer ") + main }, t("Remove", "Retirer")));
 
 /* ===== The page ===== */
 async function profilePage() {
@@ -124,13 +121,13 @@ async function profilePage() {
   const forms = [aboutSection(p.data || {})];
   if (ME.mode === "student" && sp.data) forms.push(studentSection(sp.data));
   if (ME.mode === "tutor" && tp.data) forms.push(tutorSection(tp.data));
-  const sections = forms.map(x => x.el);
-  // Lists (subjects, schools) save each item as soon as you add it, so they stay separate
-  if (ME.mode === "tutor" && tp.data) sections.push(tutorSubjectsSection(subs.data || [], subjectList.data || []), tutorSchoolsSection(schools.data || []));
-  const saveAll = saveButton(t("Save changes", "Enregistrer les changements"), async () => {
+  // The subject and school lists work the same way: "Add" and "Remove" only change the page until you press Save
+  if (ME.mode === "tutor" && tp.data) forms.push(tutorSubjectsSection(subs.data || [], subjectList.data || []), tutorSchoolsSection(schools.data || []));
+  const saveAll = saveButton(t("Save", "Enregistrer"), async () => {
     const hadBirthDate = !!ME.birthDate;
     for (const x of forms) { const error = await x.save(); if (error) return error; } // stops at the first problem and shows it
-    if (!hadBirthDate && ME.birthDate) setTimeout(() => { if (cur.startsWith("#/profile")) profilePage(); }, 800); // date of birth is saved for good: redraw without it
+    // date of birth is saved for good: redraw the page without it
+    if (!hadBirthDate && ME.birthDate) setTimeout(() => { if (cur.startsWith("#/profile")) profilePage(); }, 600);
     return null;
   });
   saveAll.className = "btn";
@@ -141,9 +138,8 @@ async function profilePage() {
       ? t(`This is what students see once ${BRAND} approves you. Grades and schools are shown as self-reported.`, `C’est ce que les élèves voient une fois que ${BRAND} t’a approuvé. Les notes et écoles sont indiquées comme déclarées.`)
       : t("Only you see this. Your school is shown to tutors only if you choose.", "Toi seul vois ceci. Ton école est montrée aux tuteurs seulement si tu le choisis.")),
     otherRole ? h("p", { class: "mu" }, ME.mode === "tutor" ? t("To edit your student profile, switch to student mode.", "Pour modifier ton profil élève, passe en mode élève.") : t("To edit your tutor profile, switch to tutor mode.", "Pour modifier ton profil tuteur, passe en mode tuteur.")) : null,
-    h("div", { style: "display:grid;gap:14px" }, ...sections.slice(0, forms.length),
-      h("div", { class: "savebar" }, saveAll, h("span", { class: "mu" }, t("Saves everything above in one go.", "Enregistre tout ce qui est au-dessus d’un coup."))),
-      ...sections.slice(forms.length))));
+    h("div", { style: "display:grid;gap:14px" }, ...forms.map(x => x.el),
+      h("div", { class: "savebar" }, saveAll, h("span", { class: "mu" }, t("Saves your whole profile in one go.", "Enregistre tout ton profil d’un coup."))))));
 }
 
 function aboutSection(p) {
@@ -222,72 +218,129 @@ function pickCourseInto(c, f, select, subjectList) {
   return f.code; // what the course box shows (empty for a general subject, which has no code)
 }
 
-function tutorSubjectsSection(list, subjectList) {
+// A saved list (subjects or schools) where "Add" and "Remove" wait for the page's Save button.
+// Returns { el, save }. After saving, the list shows what the database now holds. Pending items show "Not saved yet"; removed ones are crossed out with an Undo button.
+function stagedList({ title, intro, empty, saved, label, table, cols, toRow, addForm, takeForm, dupMsg }) {
   const wrap = h("div", { class: "c" });
-  const f = { subject: "", code: "", grade: "", school: null };
+  const adds = [], removes = new Set();
+  const listBox = h("div", {});
+  const draw = () => listBox.replaceChildren(...(saved.length + adds.length === 0 ? [h("p", { class: "mu" }, empty)] : [
+    ...saved.map(s => {
+      const gone = removes.has(s.id);
+      return h("div", { class: "row sp" + (gone ? " gone" : ""), style: "padding:10px 0;border-top:1px solid var(--ln);flex-wrap:nowrap" },
+        h("div", {}, h("b", {}, label(s).main), h("div", { class: "mu" }, gone ? h("span", { class: "pending" }, t("Will be removed when you save", "Sera retiré à l’enregistrement")) : label(s).sub)),
+        h("button", { type: "button", class: "btn sm " + (gone ? "g" : "no"), "aria-label": (gone ? t("Undo removing ", "Annuler le retrait de ") : t("Remove ", "Retirer ")) + label(s).main,
+          onclick: () => { gone ? removes.delete(s.id) : removes.add(s.id); draw(); } }, gone ? t("Undo", "Annuler") : t("Remove", "Retirer")));
+    }),
+    ...adds.map((a, i) => h("div", { class: "row sp", style: "padding:10px 0;border-top:1px solid var(--ln);flex-wrap:nowrap" },
+      h("div", {}, h("b", {}, a.main), h("div", { class: "mu" }, h("span", { class: "pending" }, t("Not saved yet", "Pas encore enregistré")), a.sub ? " · " + a.sub : "")),
+      h("button", { type: "button", class: "btn sm no", "aria-label": t("Remove ", "Retirer ") + a.main, onclick: () => { adds.splice(i, 1); draw(); } }, t("Remove", "Retirer"))))]));
+  // takeForm() reads the "Add" form: returns { row, main, sub } to add, { error } if it's half filled, or null if it's empty
+  const stage = er => {
+    const got = takeForm();
+    if (!got) return true;
+    if (got.error) { er.textContent = got.error; return false; }
+    er.textContent = "";
+    adds.push(got);
+    draw();
+    return true;
+  };
   const er = h("p", { class: "err", role: "alert" });
+  wrap.append(...[h("h3", {}, title), intro ? h("p", { class: "mu" }, intro) : null, listBox, addForm(() => stage(er), er)].filter(Boolean));
+  draw();
+  const api = { el: wrap, changedList: false, save: async () => {
+    if (!stage(er)) return { message: er.textContent }; // something typed in the Add form but not added yet: include it
+    if (removes.size) {
+      const { error } = await SB.from(table).delete().in("id", [...removes]);
+      if (error) return error;
+      saved = saved.filter(s => !removes.has(s.id)); // done: so pressing Save again won't repeat it
+      removes.clear();
+    }
+    if (adds.length) {
+      const { data, error } = await SB.from(table).insert(adds.map(a => toRow(a.row))).select(cols);
+      if (error) { draw(); return /duplicate/i.test(error.message) ? { message: dupMsg } : error; }
+      saved = saved.concat(data || []);
+      adds.length = 0;
+    }
+    draw();
+    return null;
+  } };
+  return api;
+}
+
+function tutorSubjectsSection(list, subjectList) {
+  let f = { subject: "", code: "", grade: "", school: null };
   const cats = [["academic", "School subjects", "Matières scolaires"], ["language", "Languages", "Langues"], ["tech", "Tech and software", "Techno et logiciels"], ["arts", "Music and arts", "Musique et arts"], ["other", "Other", "Autre"]];
-  const subjectSelect = h("select", { onchange: e => { f.subject = e.target.value; } }, h("option", { value: "" }, t("Choose a subject…", "Choisis une matière…")),
+  const subjectSelect = h("select", { "aria-label": t("Subject", "Matière"), onchange: e => { f.subject = e.target.value; } }, h("option", { value: "" }, t("Choose a subject…", "Choisis une matière…")),
     ...cats.map(([c, en, fr]) => h("optgroup", { label: t(en, fr) }, ...subjectList.filter(s => s.category === c).map(s => h("option", { value: s.id }, subjectName(s))))));
   const schoolLine = h("div", {});
   const drawSchool = () => schoolLine.replaceChildren(f.school
     ? h("div", { class: "row" }, h("b", {}, schoolName(f.school)), h("button", { type: "button", class: "btn sm g", onclick: () => { f.school = null; drawSchool(); } }, t("Remove", "Retirer")))
     : schoolPicker(s => { f.school = s; drawSchool(); }, t("Where you took it (optional)", "Où tu l’as suivi (facultatif)")));
   drawSchool();
-  const add = async () => {
-    if (!f.subject) { er.textContent = t("Choose a subject.", "Choisis une matière."); return; }
-    const { error } = await SB.from("tutor_subjects").insert({ tutor_id: ME.id, subject_id: Number(f.subject), course_code: f.code.trim().toUpperCase() || null,
-      grade: f.grade.trim() || null, institution_id: f.school ? f.school.id : null });
-    if (error) { er.textContent = /duplicate/i.test(error.message) ? t("You already listed this.", "Tu l’as déjà ajouté.") : error.message; return; }
-    profilePage();
-  };
-  wrap.append(h("h3", {}, t("Subjects and skills you teach", "Matières et compétences enseignées")),
-    h("p", { class: "mu" }, t("Add a course code if you took a specific course, so students in that course find you first.", "Ajoute un code de cours si tu as suivi un cours précis, pour que les élèves de ce cours te trouvent en premier.")),
-    ...(list.length ? list.map(s => listRow(subjectName(s.subjects) + (s.course_code ? " · " + s.course_code : ""),
-      [schoolName(s.institutions), s.grade ? t("grade (self-reported) ", "note (déclarée) ") + s.grade : ""].filter(Boolean).join(" · "),
-      async () => { const { error } = await SB.from("tutor_subjects").delete().eq("id", s.id); if (error) toast(error.message); else profilePage(); }))
-      : [h("p", { class: "mu" }, t("No subjects yet.", "Aucune matière pour l’instant."))]),
-    h("div", { style: "display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ln)" },
+  const codeInput = h("input", { type: "text", maxlength: 30, placeholder: t("Course code or name (optional), e.g. 201-NYA-05", "Code ou nom du cours (facultatif), ex. 201-NYA-05"), "aria-label": t("Course code", "Code de cours"), oninput: e => { f.code = e.target.value; } });
+  const gradeInput = h("input", { type: "text", maxlength: 5, placeholder: t("Your grade (optional), e.g. A", "Ta note (facultatif), ex. A"), "aria-label": t("Grade", "Note"), oninput: e => { f.grade = e.target.value; } });
+  const clear = () => { f = { subject: "", code: "", grade: "", school: null }; subjectSelect.value = ""; codeInput.value = ""; gradeInput.value = ""; drawSchool(); };
+  return stagedList({
+    title: t("Subjects and skills you teach", "Matières et compétences enseignées"),
+    intro: t("Add a course code if you took a specific course, so students in that course find you first.", "Ajoute un code de cours si tu as suivi un cours précis, pour que les élèves de ce cours te trouvent en premier."),
+    empty: t("No subjects yet.", "Aucune matière pour l’instant."),
+    saved: list, table: "tutor_subjects", cols: "id,course_code,grade,subjects(name_en,name_fr),institutions(name,name_fr)",
+    dupMsg: t("You already listed one of these subjects.", "Tu as déjà ajouté une de ces matières."),
+    label: s => ({ main: subjectName(s.subjects) + (s.course_code ? " · " + s.course_code : ""),
+      sub: [schoolName(s.institutions), s.grade ? t("grade (self-reported) ", "note (déclarée) ") + s.grade : ""].filter(Boolean).join(" · ") }),
+    toRow: r => ({ tutor_id: ME.id, ...r }),
+    takeForm: () => {
+      if (!f.subject) return (f.code.trim() || f.grade.trim() || f.school) ? { error: t("Choose a subject for the course you’re adding.", "Choisis une matière pour le cours que tu ajoutes.") } : null;
+      const code = f.code.trim().toUpperCase() || null, s = subjectList.find(x => String(x.id) === String(f.subject));
+      const got = { row: { subject_id: Number(f.subject), course_code: code, grade: f.grade.trim() || null, institution_id: f.school ? f.school.id : null },
+        main: subjectName(s) + (code ? " · " + code : ""),
+        sub: [schoolName(f.school), f.grade.trim() ? t("grade ", "note ") + f.grade.trim() : ""].filter(Boolean).join(" · ") };
+      clear();
+      return got;
+    },
+    addForm: (stage, er) => h("div", { style: "display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ln)" },
       h("b", {}, t("Add a subject", "Ajouter une matière")), subjectSelect,
-      h("div", { class: "g2" },
-        courseBox(h("input", { type: "text", maxlength: 30, placeholder: t("Course code or name (optional), e.g. 201-NYA-05", "Code ou nom du cours (facultatif), ex. 201-NYA-05"), "aria-label": t("Course code", "Code de cours"), oninput: e => { f.code = e.target.value; } }),
-          c => pickCourseInto(c, f, subjectSelect, subjectList)),
-        h("input", { type: "text", maxlength: 5, placeholder: t("Your grade (optional), e.g. A", "Ta note (facultatif), ex. A"), "aria-label": t("Grade", "Note"), oninput: e => { f.grade = e.target.value; } })),
-      schoolLine, er, h("div", {}, h("button", { class: "btn sm", onclick: add }, t("Add subject", "Ajouter la matière")))));
-  return wrap;
+      h("div", { class: "g2" }, courseBox(codeInput, c => pickCourseInto(c, f, subjectSelect, subjectList)), gradeInput),
+      schoolLine, er, h("div", {}, h("button", { type: "button", class: "btn sm g", onclick: stage }, "+ " + t("Add to list", "Ajouter à la liste"))))
+  });
 }
 
 function tutorSchoolsSection(list) {
-  const wrap = h("div", { class: "c" });
-  const f = { school: null, program: "", start: "", end: "", current: false };
-  const er = h("p", { class: "err", role: "alert" });
+  let f = { school: null, program: "", start: "", end: "", current: false };
   const schoolLine = h("div", {});
   const drawSchool = () => schoolLine.replaceChildren(f.school
     ? h("div", { class: "row" }, h("b", {}, schoolName(f.school)), h("button", { type: "button", class: "btn sm g", onclick: () => { f.school = null; drawSchool(); } }, t("Change", "Changer")))
     : schoolPicker(s => { f.school = s; drawSchool(); }));
   drawSchool();
   const year = (key, label) => h("input", { type: "number", min: 1980, max: 2100, placeholder: label, "aria-label": label, oninput: e => { f[key] = e.target.value; } });
-  const add = async () => {
-    if (!f.school) { er.textContent = t("Choose a school.", "Choisis une école."); return; }
-    const s = f.start ? Number(f.start) : null, e = f.end ? Number(f.end) : null;
-    if ((s && (s < 1980 || s > 2100)) || (e && (e < 1980 || e > 2100)) || (s && e && e < s)) { er.textContent = t("Check the years.", "Vérifie les années."); return; }
-    const { error } = await SB.from("tutor_institutions").insert({ tutor_id: ME.id, institution_id: f.school.id, program: f.program.trim() || null,
-      start_year: s, end_year: f.current ? null : e, is_current: f.current });
-    if (error) { er.textContent = /duplicate/i.test(error.message) ? t("You already listed this school.", "Tu as déjà ajouté cette école.") : error.message; return; }
-    profilePage();
-  };
+  const program = h("input", { type: "text", maxlength: 120, placeholder: t("Program (optional), e.g. Science", "Programme (facultatif), ex. Sciences"), "aria-label": t("Program", "Programme"), oninput: e => { f.program = e.target.value; } });
+  const startIn = year("start", t("Start year", "Année de début")), endIn = year("end", t("End year", "Année de fin"));
+  const nowBox = h("input", { type: "checkbox", onchange: e => { f.current = e.target.checked; } });
   const years = s => s.is_current ? (s.start_year ? s.start_year + " – " : "") + t("now", "aujourd’hui") : [s.start_year, s.end_year].filter(Boolean).join(" – ");
-  wrap.append(h("h3", {}, t("Schools, current and past", "Écoles, actuelles et passées")),
-    ...(list.length ? list.map(s => listRow(schoolName(s.institutions), [s.program, years(s)].filter(Boolean).join(" · "),
-      async () => { const { error } = await SB.from("tutor_institutions").delete().eq("id", s.id); if (error) toast(error.message); else profilePage(); }))
-      : [h("p", { class: "mu" }, t("No schools yet. Optional, but it helps students trust you.", "Aucune école pour l’instant. Facultatif, mais ça aide les élèves à te faire confiance."))]),
-    h("div", { style: "display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ln)" },
-      h("b", {}, t("Add a school", "Ajouter une école")), schoolLine,
-      h("input", { type: "text", maxlength: 120, placeholder: t("Program (optional), e.g. Science", "Programme (facultatif), ex. Sciences"), "aria-label": t("Program", "Programme"), oninput: e => { f.program = e.target.value; } }),
-      h("div", { class: "g2" }, year("start", t("Start year", "Année de début")), year("end", t("End year", "Année de fin"))),
-      h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap" }, h("input", { type: "checkbox", onchange: e => { f.current = e.target.checked; } }), t("I study here now", "J’étudie ici présentement")),
-      er, h("div", {}, h("button", { class: "btn sm", onclick: add }, t("Add school", "Ajouter l’école")))));
-  return wrap;
+  return stagedList({
+    title: t("Schools, current and past", "Écoles, actuelles et passées"),
+    empty: t("No schools yet. Optional, but it helps students trust you.", "Aucune école pour l’instant. Facultatif, mais ça aide les élèves à te faire confiance."),
+    saved: list, table: "tutor_institutions", cols: "id,is_current,program,start_year,end_year,institutions(name,name_fr)",
+    dupMsg: t("You already listed one of these schools.", "Tu as déjà ajouté une de ces écoles."),
+    label: s => ({ main: schoolName(s.institutions), sub: [s.program, years(s)].filter(Boolean).join(" · ") }),
+    toRow: r => ({ tutor_id: ME.id, ...r }),
+    takeForm: () => {
+      if (!f.school) return (f.program.trim() || f.start || f.end) ? { error: t("Choose a school.", "Choisis une école.") } : null;
+      const s = f.start ? Number(f.start) : null, e = f.end ? Number(f.end) : null;
+      if ((s && (s < 1980 || s > 2100)) || (e && (e < 1980 || e > 2100)) || (s && e && e < s)) return { error: t("Check the years.", "Vérifie les années.") };
+      const row = { institution_id: f.school.id, program: f.program.trim() || null, start_year: s, end_year: f.current ? null : e, is_current: f.current };
+      const got = { row, main: schoolName(f.school), sub: [row.program, years(row)].filter(Boolean).join(" · ") };
+      f = { school: null, program: "", start: "", end: "", current: false };
+      program.value = startIn.value = endIn.value = ""; nowBox.checked = false; drawSchool();
+      return got;
+    },
+    addForm: (stage, er) => h("div", { style: "display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--ln)" },
+      h("b", {}, t("Add a school", "Ajouter une école")), schoolLine, program,
+      h("div", { class: "g2" }, startIn, endIn),
+      h("label", { class: "row", style: "cursor:pointer;flex-wrap:nowrap" }, nowBox, t("I study here now", "J’étudie ici présentement")),
+      er, h("div", {}, h("button", { type: "button", class: "btn sm g", onclick: stage }, "+ " + t("Add to list", "Ajouter à la liste"))))
+  });
 }
 
 ROUTES.profile = profilePage;

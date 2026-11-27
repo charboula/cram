@@ -175,3 +175,9 @@ nav a:hover{background:none;color:var(--ink)}nav a.on{background:none;color:var(
 .todo{list-style:none;padding:0;margin:10px 0 12px;display:grid;gap:6px}
 .todo li{color:var(--mu)}.todo li.done{color:var(--ok);font-weight:600}
 .nudge{border-style:dashed;margin-top:4px}
+/* Sign-up "I agree" checkbox and the "I'm human" check */
+.agree{display:flex;gap:10px;align-items:flex-start;margin:12px 0 2px;font-size:14px;cursor:pointer}
+.agree input{width:18px;height:18px;margin-top:2px;flex:none}
+.hcheck{margin:10px 0;min-height:65px}
+.pending{color:var(--wa);font-size:13px;font-weight:600}
+.gone b{text-decoration:line-through;opacity:.55}

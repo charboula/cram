@@ -64,6 +64,8 @@ function authModal(mode, joinAs) {
     } }, l)));
   const dob = datePicker(t("Your date of birth", "Ta date de naissance"));
   const pw = h("input", { type: "password", "aria-label": t("Password", "Mot de passe"), autocomplete: mode === "login" ? "current-password" : "new-password" });
+  const agree = h("input", { type: "checkbox", id: "agree" }); // sign-up only: must be ticked to create an account
+  const hcBox = h("div", {}), human = humanCheck(hcBox); // bot check (only shows once TURNSTILE_SITE_KEY is set in core.js)
 
   const submit = async () => {
     const email = f.email.trim().toLowerCase();
@@ -71,6 +73,9 @@ function authModal(mode, joinAs) {
     if (mode === "signup") { const p = ageProblem(dob.getValue(), f.joinAs); if (p) { er.textContent = p; return; } }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { er.textContent = t("Please enter a valid email address.", "Entre une adresse courriel valide."); return; }
     if (pw.value.length < 8) { er.textContent = t("Password must be at least 8 characters.", "Le mot de passe doit contenir au moins 8 caractères."); return; }
+    if (mode === "signup" && !agree.checked) { er.textContent = t("Please tick the box to agree to the Terms and Privacy policy.", "Coche la case pour accepter les Conditions et la Politique de confidentialité."); return; }
+    if (TURNSTILE_SITE_KEY && !human.token()) { er.textContent = humanCheckMissing(); return; }
+    const captchaToken = human.token() || undefined;
     if (!SB) { er.textContent = t("Can’t reach the account service. Refresh the page and try again.", "Impossible de joindre le service de comptes. Actualise la page et réessaie."); return; }
     er.textContent = "";
     btn.disabled = true;
@@ -82,7 +87,7 @@ function authModal(mode, joinAs) {
           account_kind: f.joinAs === "parent" ? "parent" : "self",
           display_name: f.name.trim(),
           birth_date: dob.getValue() };
-        const { data, error } = await withTimeout(SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname } }), 20000);
+        const { data, error } = await withTimeout(SB.auth.signUp({ email, password: pw.value, options: { data: data_, emailRedirectTo: location.origin + location.pathname, captchaToken } }), 20000);
         if (error) throw error;
         if (data.user && data.user.identities && data.user.identities.length === 0) { er.textContent = t("That email already has an account. Try logging in.", "Ce courriel a déjà un compte. Essaie de te connecter."); return; }
         if (!data.session) {
@@ -93,7 +98,7 @@ function authModal(mode, joinAs) {
         }
         await signedIn(data.session);
       } else {
-        const { data, error } = await withTimeout(SB.auth.signInWithPassword({ email, password: pw.value }), 20000);
+        const { data, error } = await withTimeout(SB.auth.signInWithPassword({ email, password: pw.value, options: { captchaToken } }), 20000);
         if (error) throw error;
         await signedIn(data.session);
       }
@@ -103,9 +108,10 @@ function authModal(mode, joinAs) {
         : /invalid login/i.test(m) ? t("Wrong email or password.", "Courriel ou mot de passe incorrect.")
         : /not confirmed/i.test(m) ? t("Please confirm your email first. Check your inbox for the link.", "Confirme d’abord ton courriel. Cherche le lien dans ta boîte de réception.")
         : /rate limit|too many/i.test(m) ? t("Too many tries. Please wait a minute and try again.", "Trop d’essais. Attends une minute et réessaie.")
+        : /captcha/i.test(m) ? t("The “I’m human” check failed or expired. Please do it again.", "La vérification « Je suis humain » a échoué ou expiré. Refais-la.")
         : /database error/i.test(m) ? t("We couldn’t create this account. Check your date of birth and try again.", "Impossible de créer ce compte. Vérifie ta date de naissance et réessaie.")
         : t("Something went wrong: ", "Une erreur est survenue : ") + m;
-    } finally { btn.disabled = false; }
+    } finally { btn.disabled = false; human.reset(); } // each check works only once, so get a fresh one for the next try
   };
   const btn = h("button", { class: "btn", style: "width:100%", onclick: submit }, mode === "signup" ? t("Create account", "Créer le compte") : t("Log in", "Se connecter"));
   modal(h("h3", { style: "margin-bottom:10px" }, `${BRAND}`), tabs,
@@ -116,10 +122,12 @@ function authModal(mode, joinAs) {
       h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t("Kept private. Used only for our safety rules for minors.", "Gardée privée. Sert seulement à nos règles de sécurité pour les mineurs."))] : null,
     ...field(t("Email", "Courriel"), "email", "email", "email"),
     h("label", { class: "f" }, t("Password", "Mot de passe")), pw, er,
-    mode === "signup" ? h("p", { class: "mu", style: "font-size:13px" }, t("We’ll email you a link to confirm your account. By creating an account, you agree to the ", "On t’enverra un lien par courriel pour confirmer ton compte. En créant un compte, tu acceptes les "),
-      h("a", { href: "#/terms", onclick: () => modal.close() }, t("Terms", "Conditions")), t(" and the ", " et la "),
-      h("a", { href: "#/privacy", onclick: () => modal.close() }, t("Privacy policy", "Politique de confidentialité")), ".") : null,
-    btn,
+    mode === "signup" ? [
+      h("label", { class: "agree", for: "agree" }, agree, h("span", {}, t("I agree to the ", "J’accepte les "),
+        h("a", { href: "#/terms", target: "_blank", rel: "noopener" }, t("Terms of use", "Conditions d’utilisation")), t(" and the ", " et la "),
+        h("a", { href: "#/privacy", target: "_blank", rel: "noopener" }, t("Privacy policy", "Politique de confidentialité")), ".")),
+      h("p", { class: "mu", style: "font-size:13px;margin:4px 0 8px" }, t("We’ll email you a link to confirm your account.", "On t’enverra un lien par courriel pour confirmer ton compte."))] : null,
+    hcBox, btn,
     mode === "login" ? h("p", { style: "text-align:center;margin:12px 0 0;font-size:14px" },
       h("a", { href: "#", onclick: e => { e.preventDefault(); forgotPassword(f.email); } }, t("Forgot your password?", "Mot de passe oublié?"))) : null);
 }
@@ -168,13 +176,16 @@ let RECOVERY = false;
 function forgotPassword(prefill) {
   const inp = h("input", { type: "email", value: prefill || "", autocomplete: "email", "aria-label": t("Email", "Courriel") });
   const er = h("p", { class: "err", role: "alert" });
+  const hcBox = h("div", {}), human = humanCheck(hcBox);
   const btn = h("button", { class: "btn", style: "width:100%;margin-top:10px", onclick: async () => {
     const email = inp.value.trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { er.textContent = t("Please enter a valid email address.", "Entre une adresse courriel valide."); return; }
+    if (TURNSTILE_SITE_KEY && !human.token()) { er.textContent = humanCheckMissing(); return; }
     btn.disabled = true;
     try {
-      const { error } = await withTimeout(SB.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }), 20000);
+      const { error } = await withTimeout(SB.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname, captchaToken: human.token() || undefined }), 20000);
       if (error && /rate limit|too many|seconds/i.test(error.message)) { er.textContent = t("Please wait a minute before asking for another link.", "Attends une minute avant de demander un autre lien."); return; }
+      if (error && /captcha/i.test(error.message)) { er.textContent = t("The “I’m human” check failed or expired. Please do it again.", "La vérification « Je suis humain » a échoué ou expiré. Refais-la."); return; }
       // Same message whether or not the email has an account, so nobody can use this to check who is on Cram
       modal(h("h3", { style: "margin-bottom:10px" }, t("Check your email", "Vérifie tes courriels")),
         h("p", {}, t("If an account uses ", "Si un compte utilise ") + email + t(", we sent it a link to choose a new password.", ", on lui a envoyé un lien pour choisir un nouveau mot de passe.")),
@@ -182,11 +193,11 @@ function forgotPassword(prefill) {
         h("button", { class: "btn", style: "width:100%", onclick: () => modal.close() }, "OK"));
     } catch (e) {
       er.textContent = e.message === "timeout" ? t("The connection is slow. Check your internet and try again.", "La connexion est lente. Vérifie ton Internet et réessaie.") : e.message;
-    } finally { btn.disabled = false; }
+    } finally { btn.disabled = false; human.reset(); }
   } }, t("Send me a link", "M’envoyer un lien"));
   modal(h("h3", { style: "margin-bottom:8px" }, t("Reset your password", "Réinitialiser ton mot de passe")),
     h("p", { class: "mu" }, t("Enter your account’s email. We’ll send you a link to choose a new password.", "Entre le courriel de ton compte. On t’enverra un lien pour choisir un nouveau mot de passe.")),
-    h("label", { class: "f" }, t("Email", "Courriel")), inp, er, btn,
+    h("label", { class: "f" }, t("Email", "Courriel")), inp, er, hcBox, btn,
     h("p", { style: "text-align:center;margin:12px 0 0;font-size:14px" }, h("a", { href: "#", onclick: e => { e.preventDefault(); authModal("login"); } }, "‹ " + t("Back to log in", "Retour à la connexion"))));
 }
 

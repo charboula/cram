@@ -17,6 +17,38 @@ const LINK_ERROR = /error/.test(location.search) || /^#error/.test(location.hash
    ("Cram" is a working name.) Also update the <title> line in index.html, which shows for a split second while loading. */
 const BRAND = "Cram";
 
+/* ===== Bot protection (Cloudflare Turnstile) =====
+   Shows a small "I'm human" check on sign-up, log-in and password reset, so bots can't mass-create accounts.
+   The SITE key below is public, like the Supabase public key: it's fine in the page code.
+   The SECRET key must NEVER go here or anywhere in GitHub: paste it only in Supabase (Authentication > Attack Protection).
+   Empty "" = the check is switched off and the site works as before. See the pull request for the setup steps.
+   Order matters: 1) paste the site key here and publish, 2) THEN switch CAPTCHA on in Supabase. */
+const TURNSTILE_SITE_KEY = "";
+
+// Draws the check inside `box`. Returns { token(), reset() }. With no site key, token() is always "" and nothing is shown.
+function humanCheck(box) {
+  const st = { token: "", id: null };
+  const api = { token: () => st.token, reset: () => { st.token = ""; if (st.id != null && window.turnstile) window.turnstile.reset(st.id); } };
+  if (!TURNSTILE_SITE_KEY) return api;
+  box.classList.add("hcheck");
+  const draw = () => {
+    if (!box.isConnected) return; // the dialog was closed before the check loaded
+    st.id = window.turnstile.render(box, { sitekey: TURNSTILE_SITE_KEY, language: lang, size: "flexible",
+      callback: tok => { st.token = tok; }, "expired-callback": () => { st.token = ""; }, "error-callback": () => { st.token = ""; } });
+  };
+  if (window.turnstile) setTimeout(draw, 0);
+  else {
+    humanCheck.waiting = (humanCheck.waiting || []).concat(draw);
+    if (!document.getElementById("cf-turnstile")) { // load Cloudflare's script only the first time it's needed
+      window.onTurnstileLoad = () => { const w = humanCheck.waiting; humanCheck.waiting = []; w.forEach(f => f()); };
+      document.head.append(h("script", { id: "cf-turnstile", src: "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit", async: true, defer: true }));
+    }
+  }
+  return api;
+}
+// Error shown when someone presses the button before the check is done
+const humanCheckMissing = () => t("Please complete the “I’m human” check first.", "Complète d’abord la vérification « Je suis humain ».");
+
 /* ===== Language: t("English", "Français") picks the right one ===== */
 let lang = "en";
 try { lang = localStorage.getItem("cram_lang") || ((navigator.language || "").toLowerCase().startsWith("fr") ? "fr" : "en"); } catch (_) {}

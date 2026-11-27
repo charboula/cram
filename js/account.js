@@ -86,7 +86,7 @@ const CONTACT = "privacy@cram.example"; // TODO: replace with Cram's real contac
 function privacyPage() {
   V.replaceChildren(h("section", { style: "max-width:760px" },
     h("h2", {}, t("Privacy policy", "Politique de confidentialité")),
-    h("p", { class: "sub" }, t("Last updated November 21, 2026", "Mise à jour le 21 novembre 2026")),
+    h("p", { class: "sub" }, t("Last updated November 27, 2026", "Mise à jour le 27 novembre 2026")),
     draftNote(),
     sec(t("Who we are", "Qui nous sommes"),
       t(`${BRAND} is an independent student project in Montreal that connects students with tutors. It is not affiliated with any school. The person responsible for protecting your personal information is ${BRAND}’s founder. Contact: `, `${BRAND} est un projet étudiant indépendant à Montréal qui met en relation des élèves et des tuteurs. Il n’est affilié à aucune école. La personne responsable de la protection de tes renseignements personnels est le fondateur de ${BRAND}. Contact : `) + CONTACT),
@@ -104,6 +104,8 @@ function privacyPage() {
       t(`Messages are visible only to the two people in the conversation, and to ${BRAND} if one of them reports it. ${BRAND}’s admin can see account data to run and protect the service.`, `Les messages ne sont visibles que par les deux personnes de la conversation, et par ${BRAND} si l’une d’elles la signale. L’administrateur de ${BRAND} peut voir les données des comptes pour faire fonctionner et protéger le service.`)),
     sec(t("Where it is stored", "Où c’est conservé"),
       t(`${BRAND}’s data is stored by our database provider, Supabase, whose servers may be outside Quebec. We picked a provider that protects data with encryption and access rules.`, `Les données de ${BRAND} sont conservées par notre fournisseur de base de données, Supabase, dont les serveurs peuvent être hors du Québec. On a choisi un fournisseur qui protège les données par chiffrement et règles d’accès.`)),
+    sec(t("Bot protection", "Protection contre les robots"),
+      t(`To stop fake accounts, the sign-up, log-in and password reset forms may use Cloudflare Turnstile, a check that looks at technical signals from your browser (not your name or email) to tell people from bots. Cloudflare handles that data under its own privacy policy.`, `Pour bloquer les faux comptes, les formulaires d’inscription, de connexion et de réinitialisation du mot de passe peuvent utiliser Cloudflare Turnstile, une vérification qui examine des signaux techniques de ton navigateur (pas ton nom ni ton courriel) pour distinguer les personnes des robots. Cloudflare traite ces données selon sa propre politique de confidentialité.`)),
     sec(t("Minors", "Mineurs"),
       [t("You must be at least 14 to create an account. Under 14, a parent or guardian creates a parent account instead.", "Il faut avoir au moins 14 ans pour créer un compte. Avant 14 ans, un parent ou tuteur légal crée plutôt un compte parent."),
        t("Requests from students under 18 are never shown to tutors.", "Les demandes des élèves de moins de 18 ans ne sont jamais montrées aux tuteurs."),
@@ -119,7 +121,7 @@ function privacyPage() {
 function termsPage() {
   V.replaceChildren(h("section", { style: "max-width:760px" },
     h("h2", {}, t("Terms of use", "Conditions d’utilisation")),
-    h("p", { class: "sub" }, t("Last updated November 21, 2026", "Mise à jour le 21 novembre 2026")),
+    h("p", { class: "sub" }, t("Last updated November 27, 2026", "Mise à jour le 27 novembre 2026")),
     draftNote(),
     sec(t(`What ${BRAND} is`, `Ce qu’est ${BRAND}`),
       t(`${BRAND} helps students and tutors find each other, talk, and book sessions. Tutors are independent: they are not ${BRAND}’s employees, and ${BRAND} does not guarantee results.`, `${BRAND} aide les élèves et les tuteurs à se trouver, à se parler et à réserver des séances. Les tuteurs sont indépendants : ils ne sont pas des employés de ${BRAND}, et ${BRAND} ne garantit pas de résultats.`)),
@@ -134,10 +136,20 @@ function termsPage() {
        t("Reviews must be about a real session and honest.", "Les avis doivent porter sur une vraie séance et être honnêtes.")]),
     sec(t("Sessions and payments", "Séances et paiements"),
       t(`${BRAND} doesn’t process payments yet. Students and tutors agree on the price themselves and settle it directly. Never pay before you have met, and meet in a public place for in-person sessions.`, `${BRAND} ne traite pas encore les paiements. Les élèves et tuteurs s’entendent sur le prix et le règlent directement. Ne paie jamais avant de vous être rencontrés, et rencontrez-vous dans un lieu public pour les séances en personne.`)),
+    sec(t("Fees", "Frais"),
+      t(`Using ${BRAND} is free for now. Later, ${BRAND} may take a small commission on completed, paid sessions. We’ll tell you at least 30 days before any fee starts, and you can close your account if you don’t agree.`, `${BRAND} est gratuit pour l’instant. Plus tard, ${BRAND} pourrait prendre une petite commission sur les séances payées et terminées. On t’avertira au moins 30 jours avant que des frais commencent, et tu pourras fermer ton compte si tu n’es pas d’accord.`)),
+    sec(t("Cancellations and problems between users", "Annulations et problèmes entre utilisateurs"),
+      [t("If you can’t make a session, tell the other person as early as you can through Messages.", "Si tu ne peux pas venir à une séance, avertis l’autre personne le plus tôt possible par Messages."),
+       t(`Disagreements about a session or a price are between the student and the tutor. ${BRAND} can help by looking at reports, but can’t refund money it never received.`, `Les désaccords sur une séance ou un prix sont entre l’élève et le tuteur. ${BRAND} peut aider en examinant les signalements, mais ne peut pas rembourser un argent qu’il n’a jamais reçu.`)]),
+    sec(t("Our responsibility", "Notre responsabilité"),
+      [t(`${BRAND} checks tutors before listing them, but can’t verify everything a user says. Use your judgment, and report anything that seems wrong.`, `${BRAND} vérifie les tuteurs avant de les afficher, mais ne peut pas vérifier tout ce qu’un utilisateur dit. Fais preuve de jugement, et signale tout ce qui semble anormal.`),
+       t(`The site is offered as it is and may sometimes be unavailable. To the extent the law allows, ${BRAND} isn’t responsible for what happens during sessions between users. Nothing here removes rights you have under Quebec consumer protection law.`, `Le site est offert tel quel et peut parfois être indisponible. Dans la mesure permise par la loi, ${BRAND} n’est pas responsable de ce qui se passe pendant les séances entre utilisateurs. Rien ici ne retire les droits que te donne la Loi sur la protection du consommateur du Québec.`)]),
     sec(t("Safety and reports", "Sécurité et signalements"),
       t(`Use the Report button if something is wrong. ${BRAND} may hide profiles, remove content or close accounts that break these rules. In an emergency, call 911.`, `Utilise le bouton Signaler si quelque chose ne va pas. ${BRAND} peut masquer des profils, retirer du contenu ou fermer des comptes qui enfreignent ces règles. En cas d’urgence, appelle le 911.`)),
+    sec(t("Closing your account", "Fermer ton compte"),
+      t("You can delete your account at any time from your dashboard.", "Tu peux supprimer ton compte à tout moment depuis ton tableau de bord.")),
     sec(t("Changes and contact", "Changements et contact"),
-      t(`${BRAND} is an early-stage project and these terms may change; we’ll show the date of the latest version here. Questions: `, `${BRAND} est un projet en démarrage et ces conditions peuvent changer; on indiquera ici la date de la dernière version. Questions : `) + CONTACT)));
+      t(`${BRAND} is an early-stage project and these terms may change; we’ll show the date of the latest version here, and tell you about important changes. These terms follow the laws of Quebec and Canada. Questions: `, `${BRAND} est un projet en démarrage et ces conditions peuvent changer; on indiquera ici la date de la dernière version, et on t’avisera des changements importants. Ces conditions suivent les lois du Québec et du Canada. Questions : `) + CONTACT)));
 }
 
 ROUTES.privacy = privacyPage;
